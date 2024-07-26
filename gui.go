@@ -27,9 +27,12 @@ func makeGUI() fyne.CanvasObject {
 
 	content := canvas.NewRectangle(color.Gray{Y: 0xee})
 
-	objs := []fyne.CanvasObject{content, top, left, right}
+	dividers := [3]fyne.CanvasObject{
+		widget.NewSeparator(), widget.NewSeparator(), widget.NewSeparator(),
+	}
+	objs := []fyne.CanvasObject{content, top, left, right, dividers[0], dividers[1], dividers[2]}
 	// return container.NewBorder(makeBanner(), nil, left, right, content)
-	return container.New(newLayout(top, left, right, content), objs...)
+	return container.New(newLayout(top, left, right, content, dividers), objs...)
 }
 
 // func main() {
