@@ -23,14 +23,13 @@ func makeBanner() fyne.CanvasObject {
 // func MinSize(top, objects []fyne.CanvasObject) fyne.Size {
 // 	// return fyne.NewSize(10, 10)
 
-// 	borders := fyne.NewSize(
-// 		sideWidth*2,
-// 		top.MinSize().Height,
-// 	)
-// 	return borders.AddWidthHeight(100, 100)
-// }
-
-func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject, dividers [3]fyne.CanvasObject, size fyne.Size) {
+//		borders := fyne.NewSize(
+//			sideWidth*2,
+//			top.MinSize().Height,
+//		)
+//		return borders.AddWidthHeight(100, 100)
+//	}
+func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject, dividers [3]fyne.CanvasObject, size fyne.Size, showRight bool) {
 	topHeight := top.MinSize().Height
 	bottomHeight := bottom.MinSize().Height
 
@@ -41,12 +40,19 @@ func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject,
 	left.Move(fyne.NewPos(0, topHeight))
 	left.Resize(fyne.NewSize(sideWidth, size.Height-topHeight))
 
-	right.Move(fyne.NewPos(size.Width-sideWidth, topHeight))
-	right.Resize(fyne.NewSize(sideWidth, size.Height-topHeight))
-	right.Hide()
+	rightWidth := float32(0)
+	if showRight {
+		rightWidth = sideWidth
+		right.Show()
+	} else {
+		right.Hide()
+	}
+
+	right.Move(fyne.NewPos(size.Width-rightWidth, topHeight))
+	right.Resize(fyne.NewSize(rightWidth, size.Height-topHeight))
 
 	content.Move(fyne.NewPos(sideWidth, topHeight))
-	content.Resize(fyne.NewSize(size.Width-2*sideWidth, size.Height-topHeight))
+	content.Resize(fyne.NewSize(size.Width-sideWidth-rightWidth, size.Height-topHeight))
 
 	dividerThickness := theme.SeparatorThicknessSize()
 	dividers[0].Move(fyne.NewPos(0, topHeight))
@@ -55,7 +61,7 @@ func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject,
 	dividers[1].Move(fyne.NewPos(sideWidth, topHeight))
 	dividers[1].Resize(fyne.NewSize(dividerThickness, size.Height-topHeight))
 
-	dividers[2].Move(fyne.NewPos(size.Width-sideWidth, topHeight))
+	dividers[2].Move(fyne.NewPos(size.Width-rightWidth, topHeight))
 	dividers[2].Resize(fyne.NewSize(dividerThickness, size.Height-topHeight))
 
 	bottom.Move(fyne.NewPos(0, size.Height-bottomHeight))
@@ -67,21 +73,8 @@ func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject,
 	textbox.Resize(fyne.NewSize(size.Width, textboxHeight))
 }
 
-type customLayout struct {
-	top, bottom, left, right, textbox, content fyne.CanvasObject
-	dividers                                   [3]fyne.CanvasObject
-}
-
-func (l *customLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
-	setPosAndSize(l.top, l.bottom, l.left, l.right, l.textbox, l.content, l.dividers, size)
-}
-
-func (l *customLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
-	return fyne.NewSize(800, 600)
-}
-
 func makeGUI() fyne.CanvasObject {
-	left := widget.NewLabel("left")
+	leftButton := widget.NewButton("Toggle Right", nil)
 	right := widget.NewLabel("right")
 
 	singleLineEntry := widget.NewEntry()
@@ -99,21 +92,26 @@ func makeGUI() fyne.CanvasObject {
 		widget.NewSeparator(), widget.NewSeparator(), widget.NewSeparator(),
 	}
 
-	// Use custom layout
-	return fyne.NewContainerWithLayout(
-		&customLayout{
-			top:     top,
-			bottom:  bottom,
-			left:    left,
-			right:   right,
-			textbox: textbox,
-			content: content,
-			dividers: [3]fyne.CanvasObject{
-				dividers[0], dividers[1], dividers[2],
-			},
-		},
-		top, bottom, left, right, textbox, content, dividers[0], dividers[1], dividers[2],
-	)
+	root := container.NewWithoutLayout(top, bottom, leftButton, right, textbox, content, dividers[0], dividers[1], dividers[2])
+
+	resizeAndRefresh := func() {
+		setPosAndSize(top, bottom, leftButton, right, textbox, content, dividers, root.Size(), right.Visible())
+		root.Refresh()
+	}
+
+	leftButton.OnTapped = func() {
+		if right.Visible() {
+			right.Hide()
+		} else {
+			right.Show()
+		}
+		resizeAndRefresh()
+	}
+
+	root.Resize(fyne.NewSize(800, 600))
+	resizeAndRefresh()
+
+	return root
 }
 
 // func main() {
