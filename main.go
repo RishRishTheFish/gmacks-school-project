@@ -46,6 +46,15 @@ func main() {
 	a.Settings().SetTheme(newTheme())
 	w := a.NewWindow("app")
 	w.Resize(fyne.NewSize(1034, 768))
+
+	// split := container.NewHSplit(appList, content)
+	// split.Offset = 0.1
+	// w.SetContent(split)
+
+	// // Create a multi-line text box
+	// multiLineEntry := w.NewMultiLineEntry()
+	// multiLineEntry.SetPlaceHolder("Enter multi-line text...")
+
 	w.SetContent(makeGUI())
 	// w.SetContent(widget.NewLabel("app"))
 	w.ShowAndRun()
