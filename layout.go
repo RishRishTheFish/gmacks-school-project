@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 )
@@ -277,10 +276,10 @@ func (l *mainLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
 	l.textbox.Resize(fyne.NewSize(size.Width, textboxHeight))
 
 	// Create a container with all the widgets
-	container := container.NewWithoutLayout(objects...)
+	// container := container.NewWithoutLayout(objects...)
 
 	// Call adjustLayout function
-	adjustLayout(container, l.right)
+	//adjustLayout(container, l.right)
 }
 
 func (l *mainLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
