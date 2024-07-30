@@ -46,6 +46,8 @@ fyne.io/systray v1.10.1-0.20230207085535-4a244dbb9d03/go.mod h1:oM2AQqGJ1AMo4nNq
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.1.0/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
+github.com/KeluDiao/gotube v0.0.0-20190406022055-2e08b0c4301f h1:/cOsL7v0yrLxIw64UcpH91L2sL3jVrDw3vVAuf8nSyw=
+github.com/KeluDiao/gotube v0.0.0-20190406022055-2e08b0c4301f/go.mod h1:Z6DfJBCR0lUunpe6FWNEVHSYT14iQc2z9vPO6+hxhhw=
 github.com/Kodeworks/golang-image-ico v0.0.0-20141118225523-73f0f4cfade9/go.mod h1:7uhhqiBaR4CpN0k9rMjOtjpcfGd6DG2m04zQxKnWQ0I=
 github.com/akavel/rsrc v0.8.0/go.mod h1:uLoCtb9J+EyAqh+26kdrTgmzRBFPGOolLWKpdxkKq+c=
 github.com/akavel/rsrc v0.10.2/go.mod h1:uLoCtb9J+EyAqh+26kdrTgmzRBFPGOolLWKpdxkKq+c=
