@@ -55,7 +55,7 @@ func main() {
 	// multiLineEntry := w.NewMultiLineEntry()
 	// multiLineEntry.SetPlaceHolder("Enter multi-line text...")
 
-	w.SetContent(makeGUI())
+	w.SetContent(makeGUI(w))
 	// w.SetContent(widget.NewLabel("app"))
 	w.ShowAndRun()
 

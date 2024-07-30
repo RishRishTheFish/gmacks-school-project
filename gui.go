@@ -29,7 +29,9 @@ func makeBanner() fyne.CanvasObject {
 //		)
 //		return borders.AddWidthHeight(100, 100)
 //	}
-func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject, dividers [3]fyne.CanvasObject, size fyne.Size, showRight bool) {
+//
+// func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject, options fyne.CanvasObject, dividers [3]fyne.CanvasObject, size fyne.Size, showRight bool, showOptions bool) {
+func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject, dividers [3]fyne.CanvasObject, size fyne.Size, showRight bool, showOptions bool, options *widget.PopUp) {
 	topHeight := top.MinSize().Height
 	bottomHeight := bottom.MinSize().Height
 
@@ -46,6 +48,20 @@ func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject,
 		right.Show()
 	} else {
 		right.Hide()
+	}
+
+	if showOptions {
+		options.Show()
+		optionsWidth := size.Width / 2
+		optionsHeight := size.Height - topHeight - bottomHeight
+		options.Resize(fyne.NewSize(optionsWidth/2, optionsHeight/2))
+
+		// Calculate the center position
+		centerX := (size.Width - optionsWidth) / 2
+		centerY := (size.Height - optionsHeight) / 2
+		options.Move(fyne.NewPos(centerX, topHeight+centerY))
+	} else {
+		options.Hide()
 	}
 
 	right.Move(fyne.NewPos(size.Width-rightWidth, topHeight))
@@ -73,9 +89,26 @@ func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject,
 	textbox.Resize(fyne.NewSize(size.Width, textboxHeight))
 }
 
-func makeGUI() fyne.CanvasObject {
-	leftButton := widget.NewButton("Toggle Right", nil)
+func makeGUI(w fyne.Window) fyne.CanvasObject {
+	toggleButton1 := widget.NewButton("Toggle Right", nil)
+	toggleButton2 := widget.NewButton("Show options", nil)
+
+	left := container.NewVBox(
+		widget.NewLabel("Buttons:"),
+		toggleButton1,
+		toggleButton2,
+	)
+
+	enableOptions := false
+
 	right := widget.NewLabel("right")
+	options := widget.NewModalPopUp(
+		container.NewVBox(
+			widget.NewLabel("First option"),
+		),
+		w.Canvas(),
+	)
+	options.Hide() // Ensure options is hidden initially
 
 	singleLineEntry := widget.NewEntry()
 	singleLineEntry.SetPlaceHolder("Enter text...")
@@ -92,14 +125,19 @@ func makeGUI() fyne.CanvasObject {
 		widget.NewSeparator(), widget.NewSeparator(), widget.NewSeparator(),
 	}
 
-	root := container.NewWithoutLayout(top, bottom, leftButton, right, textbox, content, dividers[0], dividers[1], dividers[2])
+	root := container.NewWithoutLayout(top, bottom, left, right, textbox, content, options, dividers[0], dividers[1], dividers[2])
 
 	resizeAndRefresh := func() {
-		setPosAndSize(top, bottom, leftButton, right, textbox, content, dividers, root.Size(), right.Visible())
+		setPosAndSize(top, bottom, left, right, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options)
 		root.Refresh()
 	}
 
-	leftButton.OnTapped = func() {
+	toggleButton2.OnTapped = func() {
+		enableOptions = true
+		resizeAndRefresh()
+	}
+
+	toggleButton1.OnTapped = func() {
 		if right.Visible() {
 			right.Hide()
 		} else {
@@ -114,6 +152,24 @@ func makeGUI() fyne.CanvasObject {
 	return root
 }
 
+/*
+
+	// Use custom layout
+	return fyne.NewContainerWithLayout(
+		&customLayout{
+			top:     top,
+			bottom:  bottom,
+			left:    left,
+			right:   right,
+			textbox: textbox,
+			content: content,
+			dividers: [3]fyne.CanvasObject{
+				dividers[0], dividers[1], dividers[2],
+			},
+		},
+		top, bottom, left, right, textbox, content, dividers[0], dividers[1], dividers[2],
+	)
+*/
 // func main() {
 // 	// Initialize the app and set the custom theme
 // 	app := fyne.NewApp()
