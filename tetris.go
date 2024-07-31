@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"math/rand"
 	"time"
@@ -61,6 +62,17 @@ type ExtraParams struct {
 
 type cellsParams func(cells [][]*canvas.Rectangle, randNum int, color color.Color, extraParams ExtraParams)
 
+func containsPos(slice []fyne.Position, value fyne.Position) bool {
+	if len(slice) > 1 {
+		for _, v := range slice {
+			if v == value {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // func contains(slice []int, value int) bool {
 // 	if slice > 1 {
 // 		for _, v := range slice {
@@ -76,21 +88,25 @@ type cellsParams func(cells [][]*canvas.Rectangle, randNum int, color color.Colo
 
 // }
 // var limitsOnX = make([]int, 0, 10)
-var limitsWithCords []fyne.Position
+// var limitsWithCords []fyne.Position
+var previousPositions []fyne.Position
 
 func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, params ExtraParams) {
+
 	// Maintain a set of cells to be cleared
 	toBeCleared := make(map[fyne.Position]bool)
 
 	// Create a map to track occupied positions
-	occupied := make(map[fyne.Position]bool)
-	for _, pos := range limitsWithCords {
-		occupied[pos] = true
-	}
-
+	// occupied := make(map[fyne.Position]bool)
+	// for _, pos := range limitsWithCords {
+	// 	occupied[pos] = true
+	// }
+	// var previousPositionsMap = make(map[])
 	// Loop to move cells down
 	limit := 15
-
+	for i := 0; i < gridWidth; i++ {
+		previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(limit)+1))
+	}
 	for i := 0; i < limit; i++ {
 		newGroupCells := []fyne.Position{}
 
@@ -116,24 +132,41 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		// Step 3: Move cells down and track new positions
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
-
+			// fmt.Println(fyne.NewPos(float32(x), float32(y)))
 			// Check if cell can move down
 			if y+1 < len(cells) && x < len(cells[y+1]) {
 				newPos := fyne.NewPos(float32(x), float32(y+1))
-
-				// Stop moving down if there's an object in the new position
-				if _, exists := occupied[newPos]; exists {
-					continue
+				// previousPositions = append(previousPositions, newPos)
+				// if len(previousPositions) >= 5 {
+				// 	previousPositions = removeElement(previousPositions, 4)
+				// }
+				// // Stop moving down if there's an object in the new position
+				// if _, exists := occupied[newPos]; exists {
+				// 	continue
+				// }
+				// fmt.Println("previous pos")
+				// fmt.Println(previousPositions)
+				// fmt.Println("new pos")
+				// fmt.Println(newPos)
+				if containsPos(previousPositions, newPos) {
+					// previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-1))
+					previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-1))
+					// previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-2))
+					fmt.Println("reached end")
+					limit = y
+					// break
 				}
 
 				// Update the cell color and add new position
 				cells[y+1][x].FillColor = color
 				cells[y+1][x].Refresh()
 				newGroupCells = append(newGroupCells, newPos)
-			} else {
-				// If cell can't move down, it's at its final position
-				limitsWithCords = append(limitsWithCords, fyne.NewPos(float32(x), float32(y)))
 			}
+			// } else {
+			// 	// If cell can't move down, it's at its final position
+			// 	fmt.Println("Stopped here")
+			// 	// limitsWithCords = append(limitsWithCords, fyne.NewPos(float32(x), float32(y)))
+			// }
 		}
 
 		// Step 4: Update groupCells with new positions
@@ -144,6 +177,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 
 		time.Sleep(1 * time.Second) // Delay to visualize the falling effect
 	}
+	// fmt.Println("Stopped")
 }
 
 var groupCells []*fyne.Position
@@ -223,7 +257,7 @@ func applyRandomColors(grid *fyne.Container, cells [][]*canvas.Rectangle) {
 		// makeSquare(cells, randNum, color)
 		actions := []cellsParams{
 			makeSquare,
-			makeLine,
+			// makeLine,
 			makeCorner,
 		}
 		if randNum >= 9 || randNum <= 1 {
