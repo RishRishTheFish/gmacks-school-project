@@ -1,13 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 
+	//	chess "onslow.collage/chess"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	// "./chess"
 )
 
 func makeBanner() fyne.CanvasObject {
@@ -106,9 +109,11 @@ func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject,
 }
 
 func makeGUI(w fyne.Window) fyne.CanvasObject {
+	fmt.Println()
 	toggleButton1 := widget.NewButton("Toggle Right", nil)
 	toggleButton2 := widget.NewButton("Show options", nil)
 	toggleButton3 := widget.NewButton("Chess", nil)
+	toggleButton4 := widget.NewButton("Tetris", nil)
 
 	left := container.NewVBox(
 		widget.NewLabel("Buttons:"),
@@ -123,6 +128,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 		container.NewVBox(
 			widget.NewLabel("First option"),
 			toggleButton3,
+			toggleButton4,
 		),
 		w.Canvas(),
 	)
@@ -177,22 +183,11 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 		w.Resize(fyne.NewSize(480, 480))
 		w.SetContent(createGrid())
 	}
-	return root
-}
-func createGrid() *fyne.Container {
-	grid := container.NewGridWithColumns(8)
-
-	for y := 0; y < 8; y++ {
-		for x := 0; x < 8; x++ {
-			bg := canvas.NewRectangle(color.Gray{0x30})
-			if x%2 == y%2 {
-				bg.FillColor = color.Gray{0xE0}
-			}
-
-			grid.Add(bg)
-		}
+	toggleButton4.OnTapped = func() {
+		options.Hide()
+		w.SetContent(createTetris())
 	}
-	return grid
+	return root
 }
 
 /*

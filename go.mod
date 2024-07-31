@@ -3,15 +3,12 @@ module rishay.dutt/onslow.collage
 go 1.22.5
 
 require (
+	fyne.io/fyne v1.4.3
 	fyne.io/fyne/v2 v2.3.1
-	github.com/fyne-io/examples v0.0.0-20230227213322-20bc35b41147
-	github.com/stretchr/testify v1.8.0
 )
 
 require (
-	fyne.io/fyne v1.4.3 // indirect
 	fyne.io/systray v1.10.1-0.20230207085535-4a244dbb9d03 // indirect
-	github.com/KeluDiao/gotube v0.0.0-20190406022055-2e08b0c4301f // indirect
 	github.com/benoitkugler/textlayout v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v0.1.0 // indirect
@@ -26,9 +23,11 @@ require (
 	github.com/goki/freetype v0.0.0-20220119013949-7a161fd3728c // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
+	github.com/notnil/chess v1.9.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/srwiley/oksvg v0.0.0-20220731023508-a61f04f16b76 // indirect
 	github.com/srwiley/rasterx v0.0.0-20210519020934-456a8d69b780 // indirect
+	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/tevino/abool v1.2.0 // indirect
 	github.com/yuin/goldmark v1.4.0 // indirect
 	golang.org/x/image v0.0.0-20220601225756-64ec528b34cd // indirect
