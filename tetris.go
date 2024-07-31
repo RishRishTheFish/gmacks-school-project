@@ -89,20 +89,46 @@ func containsPos(slice []fyne.Position, value fyne.Position) bool {
 // }
 // var limitsOnX = make([]int, 0, 10)
 // var limitsWithCords []fyne.Position
+//
+//	window.Canvas().AddShortcut(&fyne.KeyEvent{
+//		Name: key.NameUp, // Example: Handle Up Arrow key
+//	}, func() {
+//
+//		label.SetText("Up Arrow key pressed")
+//	})
 var previousPositions []fyne.Position
 
+func clearRow(cells [][]*canvas.Rectangle, y int) {
+	rowTally := 0
+	fmt.Println("running clear")
+	for _, existingCell := range previousPositions {
+		fmt.Println("existing cells")
+		fmt.Println(existingCell.Y)
+		fmt.Println("y:")
+		fmt.Println(y)
+		if existingCell.Y == float32(y) {
+			fmt.Println("matches y (cells)")
+			rowTally++
+		}
+	}
+	fmt.Println(rowTally)
+	if rowTally == gridWidth {
+		fmt.Println("rowTally and gridWidth match")
+		for _, existingCell := range previousPositions {
+			if existingCell.Y == float32(y) {
+				fmt.Println("matched Y")
+				cells[int(existingCell.Y)][int(existingCell.X)].FillColor = rgbaGrayColor
+				// existingCell.FillColor = rgbaGrayColor
+			}
+		}
+	}
+
+}
 func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, params ExtraParams) {
 
 	// Maintain a set of cells to be cleared
 	toBeCleared := make(map[fyne.Position]bool)
 
-	// Create a map to track occupied positions
-	// occupied := make(map[fyne.Position]bool)
-	// for _, pos := range limitsWithCords {
-	// 	occupied[pos] = true
-	// }
-	// var previousPositionsMap = make(map[])
-	// Loop to move cells down
 	limit := 15
 	for i := 0; i < gridWidth; i++ {
 		previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(limit)+1))
@@ -132,28 +158,17 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		// Step 3: Move cells down and track new positions
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
-			// fmt.Println(fyne.NewPos(float32(x), float32(y)))
 			// Check if cell can move down
 			if y+1 < len(cells) && x < len(cells[y+1]) {
 				newPos := fyne.NewPos(float32(x), float32(y+1))
-				// previousPositions = append(previousPositions, newPos)
-				// if len(previousPositions) >= 5 {
-				// 	previousPositions = removeElement(previousPositions, 4)
-				// }
-				// // Stop moving down if there's an object in the new position
-				// if _, exists := occupied[newPos]; exists {
-				// 	continue
-				// }
-				// fmt.Println("previous pos")
-				// fmt.Println(previousPositions)
-				// fmt.Println("new pos")
-				// fmt.Println(newPos)
+
 				if containsPos(previousPositions, newPos) {
 					// previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-1))
 					previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-1))
 					// previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-2))
-					fmt.Println("reached end")
+					// fmt.Println("reached end")
 					limit = y
+					clearRow(cells, y)
 					// break
 				}
 
@@ -162,11 +177,6 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 				cells[y+1][x].Refresh()
 				newGroupCells = append(newGroupCells, newPos)
 			}
-			// } else {
-			// 	// If cell can't move down, it's at its final position
-			// 	fmt.Println("Stopped here")
-			// 	// limitsWithCords = append(limitsWithCords, fyne.NewPos(float32(x), float32(y)))
-			// }
 		}
 
 		// Step 4: Update groupCells with new positions
@@ -175,7 +185,8 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		// Clear `toBeCleared` for the next iteration
 		toBeCleared = make(map[fyne.Position]bool)
 
-		time.Sleep(1 * time.Second) // Delay to visualize the falling effect
+		// time.Sleep(1 * time.Second)
+		// Delay to visualize the falling effect
 	}
 	// fmt.Println("Stopped")
 }
