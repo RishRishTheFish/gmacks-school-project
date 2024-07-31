@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
 	"math/rand"
 	"time"
@@ -80,29 +79,28 @@ type cellsParams func(cells [][]*canvas.Rectangle, randNum int, color color.Colo
 var limitsWithCords []fyne.Position
 
 func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, params ExtraParams) {
+	// Maintain a set of cells to be cleared
 	toBeCleared := make(map[fyne.Position]bool)
-	occupied := make(map[fyne.Position]bool)
 
+	// Create a map to track occupied positions
+	occupied := make(map[fyne.Position]bool)
 	for _, pos := range limitsWithCords {
 		occupied[pos] = true
 	}
 
+	// Loop to move cells down
 	limit := 15
+
 	for i := 0; i < limit; i++ {
 		newGroupCells := []fyne.Position{}
-		collisionDetected := false
-
-		fmt.Printf("Iteration %d\n", i)
-		fmt.Printf("Current groupCells: %v\n", groupCells)
-		fmt.Printf("Limits with Cords: %v\n", limitsWithCords)
-		fmt.Printf("Occupied: %v\n", occupied)
 
 		// Step 1: Mark cells to be cleared
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
+
+			// Mark cell for clearing if it's within bounds
 			if y < len(cells) && x < len(cells[y]) {
 				toBeCleared[pos] = true
-				fmt.Printf("Checking cell at (%d, %d) to be cleared\n", x, y)
 			}
 		}
 
@@ -110,7 +108,6 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		for pos := range toBeCleared {
 			x, y := int(pos.X), int(pos.Y)
 			if y < len(cells) && x < len(cells[y]) {
-				fmt.Printf("Clearing cell at (%d, %d)\n", x, y)
 				cells[y][x].FillColor = rgbaGrayColor
 				cells[y][x].Refresh()
 			}
@@ -119,44 +116,31 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		// Step 3: Move cells down and track new positions
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
-			newY := y + 1
-			fmt.Printf("Moving cell at (%d, %d) down\n", x, y)
 
-			if newY < len(cells) {
-				if x < len(cells[newY]) {
-					newPos := fyne.NewPos(float32(x), float32(newY))
-					if _, exists := occupied[newPos]; exists {
-						fmt.Printf("Collision detected at (%d, %d)\n", x, newY)
-						collisionDetected = true
-						limitsWithCords = append(limitsWithCords, pos)
-						occupied[pos] = true
-						continue
-					}
+			// Check if cell can move down
+			if y+1 < len(cells) && x < len(cells[y+1]) {
+				newPos := fyne.NewPos(float32(x), float32(y+1))
 
-					cells[newY][x].FillColor = color
-					cells[newY][x].Refresh()
-					newGroupCells = append(newGroupCells, newPos)
-					occupied[newPos] = true
-				} else {
-					fmt.Printf("Final position at (%d, %d)\n", x, y)
-					limitsWithCords = append(limitsWithCords, pos)
-					occupied[pos] = true
-					collisionDetected = true
+				// Stop moving down if there's an object in the new position
+				if _, exists := occupied[newPos]; exists {
+					continue
 				}
+
+				// Update the cell color and add new position
+				cells[y+1][x].FillColor = color
+				cells[y+1][x].Refresh()
+				newGroupCells = append(newGroupCells, newPos)
 			} else {
-				fmt.Printf("Final position at (%d, %d)\n", x, y)
-				limitsWithCords = append(limitsWithCords, pos)
-				occupied[pos] = true
-				collisionDetected = true
+				// If cell can't move down, it's at its final position
+				limitsWithCords = append(limitsWithCords, fyne.NewPos(float32(x), float32(y)))
 			}
 		}
 
+		// Step 4: Update groupCells with new positions
 		groupCells = newGroupCells
-		toBeCleared = make(map[fyne.Position]bool)
 
-		if collisionDetected {
-			break
-		}
+		// Clear `toBeCleared` for the next iteration
+		toBeCleared = make(map[fyne.Position]bool)
 
 		time.Sleep(1 * time.Second) // Delay to visualize the falling effect
 	}
