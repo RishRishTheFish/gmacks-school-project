@@ -98,30 +98,132 @@ func containsPos(slice []fyne.Position, value fyne.Position) bool {
 //	})
 var previousPositions []fyne.Position
 
-func clearRow(cells [][]*canvas.Rectangle, y int) {
-	rowTally := 0
-	fmt.Println("running clear")
-	for _, existingCell := range previousPositions {
-		fmt.Println("existing cells")
-		fmt.Println(existingCell.Y)
-		fmt.Println("y:")
-		fmt.Println(y)
-		if existingCell.Y == float32(y) {
-			fmt.Println("matches y (cells)")
-			rowTally++
+func isRowFilled(row []*canvas.Rectangle, y int) bool {
+	// coloredRows = 0
+	// for _, cell := range row {
+	// 	if cell.FillColor == rgbaGrayColor {
+	// 		// fmt.Println("returning")
+	// 		return false
+	// 		// fmt.Println("this should not happen")
+	// 	}
+	// }
+	// return true
+
+	for _, cell := range row {
+		if cell.FillColor == rgbaGrayColor {
+			return false
 		}
 	}
-	fmt.Println(rowTally)
-	if rowTally == gridWidth {
-		fmt.Println("rowTally and gridWidth match")
-		for _, existingCell := range previousPositions {
-			if existingCell.Y == float32(y) {
-				fmt.Println("matched Y")
-				cells[int(existingCell.Y)][int(existingCell.X)].FillColor = rgbaGrayColor
-				// existingCell.FillColor = rgbaGrayColor
+	return true
+
+	// rowTally := 0
+	// fmt.Println("running clear")
+	// for _, existingCell := range previousPositions {
+	// 	fmt.Println("existing cells")
+	// 	fmt.Println(existingCell.Y)
+	// 	fmt.Println("y:")
+	// 	fmt.Println(y)
+	// 	if existingCell.Y == float32(y) {
+	// 		fmt.Println("matches y (cells)")
+	// 		rowTally++
+	// 	}
+	// }
+
+	// if rowTally == gridWidth {
+	// 	return false
+	// } else {
+	// 	return true
+	// }
+}
+
+// func moveRowsDown(rows [][]*canvas.Rectangle, row int) [][]*canvas.Rectangle {
+
+// }
+
+// func clearRow(rows [][]*canvas.Rectangle, row int) [][]*canvas.Rectangle {
+// 	for _, cell := range rows[row] {
+// 		cell.FillColor = rgbaGrayColor
+// 		cell.Refresh()
+// 	}
+
+// }
+// if row < gridHeight-3 {
+//
+//	if row >= gridHeight-2 {
+//		return
+//	}
+//
+//	if row <= gridHeight {
+//		return
+//	}
+//
+//	if !row {
+//		return
+//	}
+//
+// var topcells []*canvas.Rectangle
+// fmt.Println("B")
+//
+//	for _, topcell := range rows[row+1] {
+//		topcell = append(topcells, topcell)
+//	}
+func clearRow(rows [][]*canvas.Rectangle, row int) {
+
+	for x, cell := range rows[row] {
+		// if x < gridWidth {
+		if row+1 >= gridHeight {
+			continue
+		}
+		// if row-1 <= 0 {
+		// 	continue
+		// }
+		// aboveCell := rows[x+1][x]
+		// aboveCell.FillColor = cell.FillColor
+		// cell.FillColor = aboveCell.FillColor
+
+		// fmt.Println("C")
+		// fmt.Println(cell.Position().X)
+		// aboveCell := rows[x-1][x]
+		// cell.FillColor = aboveCell.FillColor
+		// aboveCell.FillColor = cell.FillColor
+		// aboveCell.Refresh()
+		// cell.Refresh()
+		aboveCell := rows[row+1][x]
+		aboveCell.FillColor = aboveCell.FillColor
+		cell.FillColor = rgbaGrayColor
+
+		// aboveCell := rows[row+1][x]
+		// cell.FillColor = aboveCell.FillColor
+		// aboveCell.FillColor = rgbaGrayColor
+		for indx, position := range previousPositions {
+			if position == cell.Position() {
+				previousPositions = removePos(previousPositions, indx)
 			}
 		}
+		for indx, position := range previousPositions {
+			if position == aboveCell.Position() {
+				previousPositions = removePos(previousPositions, indx)
+			}
+		}
+		aboveCell.Refresh()
+		cell.Refresh()
+
+		// }
 	}
+	//}
+}
+func clearRowsPeriodically(rows [][]*canvas.Rectangle) {
+	// for {
+	// 	for i := 0; i < gridHeight; i++ {
+	// 		if !isRowFilled(rows[i], i) {
+	// 			continue // row is not filled, continue on to the next row
+	// 		}
+	// 		// rows = moveRowsDown(rows, i)
+	// 		// rows = clearRow(rows, 0)
+	// 		clearRow(rows, i)
+	// 	}
+	// 	time.Sleep(1 * time.Second)
+	// }
 }
 
 // func clearRow(cells [][]*canvas.Rectangle, y int) {
@@ -277,21 +379,10 @@ var previousPositionsHasBottom bool
 //		}
 //	}
 var currentPos fyne.Position
+var allignment []int
+var groupCells []*fyne.Position
+var tempGroupCells []fyne.Position
 
-// var allignment []int
-var allignmentPos []fyne.Position
-
-// var groupCells []*fyne.Position
-
-// var tempGroupCells []*fyne.Position
-func removePos(positions []fyne.Position, pos fyne.Position) []fyne.Position {
-	for i, p := range positions {
-		if p == pos {
-			return append(positions[:i], positions[i+1:]...)
-		}
-	}
-	return positions
-}
 func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams) {
 
 	// Maintain a set of cells to be cleared
@@ -314,9 +405,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 			for i := 0; i < gridWidth; i++ {
 				var tempCellArr []fyne.Position
 				tempCellArr = append(tempCellArr, fyne.NewPos(float32(i), 2))
-				// fmt.Println(tempCellArr)
-				// fmt.Println("End of tempcellarr")
-				go fall(cells, tempCellArr, randomColor(), false, params)
+				go fall(cells, tempCellArr, rgbaGrayColor, false, params)
 			}
 		}
 		newGroupCells := []fyne.Position{}
@@ -331,19 +420,25 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 					toBeCleared[pos] = true
 				}
 			}
+		}
 
-			// Step 2: Clear the marked cells
-			for pos := range toBeCleared {
-				x, y := int(pos.X), int(pos.Y)
-				if y < len(cells) && x < len(cells[y]) {
-					cells[y][x].FillColor = rgbaGrayColor
-					cells[y][x].Refresh()
-				}
+		// Step 2: Clear the marked cells
+		for pos := range toBeCleared {
+			x, y := int(pos.X), int(pos.Y)
+			if y < len(cells) && x < len(cells[y]) {
+				cells[y][x].FillColor = rgbaGrayColor
+				cells[y][x].Refresh()
 			}
 		}
 
 		// Step 3: Move cells down and track new positions
-		for _, pos := range groupCells {
+		var cellsToCycleThrough []fyne.Position
+		if isNormal {
+			cellsToCycleThrough = groupCells
+		} else {
+			cellsToCycleThrough = tempGroupCells
+		}
+		for _, pos := range cellsToCycleThrough {
 			x, y := int(pos.X), int(pos.Y)
 			// Check if cell can move down
 			// if !(y+2 < len(cells) && x < len(cells[y+2])) {
@@ -351,25 +446,19 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 			// }
 			if y+1 < len(cells) && x < len(cells[y+1]) {
 				newPos := fyne.NewPos(float32(x), float32(y+1))
-				oldPos := fyne.NewPos(float32(x), float32(y))
-				if !isNormal {
-					allignmentPos = removePos(allignmentPos, oldPos)
-					allignmentPos = append(allignmentPos, newPos)
-					// allignment = append(allignment, y)
-					// fmt.Println(allignment)
-				}
+
 				if containsPos(previousPositions, newPos) {
 					// previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-1))
 					if isNormal {
 						previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-1))
-						fmt.Println(allignmentPos)
-						// allignment = []int{}
-						allignmentPos = []fyne.Position{}
-						limit = y
+						fmt.Println(allignment)
+						allignment = []int{}
+					} else {
+						allignment = append(allignment, y)
 					}
 					// previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-2))
 					// fmt.Println("reached end")
-
+					limit = y
 					// fallInvis(cells)
 					// checkLevel(y)
 					// checkLevel(cells)
@@ -383,25 +472,21 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 					cells[y+1][x].FillColor = color
 					cells[y+1][x].Refresh()
 				}
-				// for _, pos := range allignmentPos {
-				// 	cells[int(pos.Y)][int(pos.X)].FillColor = randomColor()
-				// 	cells[int(pos.Y)][int(pos.X)].Refresh()
-				// }
-				// cells[y+1][x].FillColor = color
-				// cells[y+1][x].Refresh()
 				newGroupCells = append(newGroupCells, newPos)
-			} else {
 			}
 		}
 
 		// Step 4: Update groupCells with new positions
-		groupCells = newGroupCells
-
+		if isNormal {
+			groupCells = newGroupCells
+		} else {
+			tempGroupCells = newGroupCells
+		}
 		// Clear `toBeCleared` for the next iteration
 		toBeCleared = make(map[fyne.Position]bool)
-		// if isNormal {
-		time.Sleep(100 * time.Millisecond)
-		// }
+		if isNormal {
+			time.Sleep(100 * time.Millisecond)
+		}
 		// Delay to visualize the falling effect
 	}
 	// fmt.Println("Stopped")
@@ -464,13 +549,18 @@ func removeAction(actions []cellsParams, index int) []cellsParams {
 	}
 	return append(actions[:index], actions[index+1:]...)
 }
-
+func removePos(pos []fyne.Position, index int) []fyne.Position {
+	if index < 0 || index >= len(pos) {
+		return pos
+	}
+	return append(pos[:index], pos[index+1:]...)
+}
 func applyRandomColors(grid *fyne.Container, cells [][]*canvas.Rectangle) {
 	// for y := 0; y < len(cells); y++ {
 
 	// var currentCell *canvas.Rectangle
 	// var groupCells [][]*canvas.Rectangle
-
+	go clearRowsPeriodically(cells)
 	for {
 		params := ExtraParams{
 			Length: 10,
