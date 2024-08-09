@@ -364,6 +364,20 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 						previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)-1))
 						fmt.Println(allignmentPos)
 						// allignment = []int{}
+						yAllignsArr := []int{}
+						for _, cell := range allignmentPos {
+							yAllignsArr = append(yAllignsArr, int(cell.Y))
+							// cells[int(cell.Y)][int(cell.X)].FillColor = color
+							// cells[int(cell.Y)][int(cell.X)].Refresh()
+							// cells.FillColor = color
+							// cells.Refresh()
+						}
+						if min(yAllignsArr) == max(yAllignsArr) {
+
+						}
+						// for _, y := range yAllignsArr {
+
+						// }
 						allignmentPos = []fyne.Position{}
 						limit = y
 					}
@@ -378,6 +392,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 				}
 
 				// Update the cell color and add new position
+				//if isNormal && !containsPos(previousPositions, fyne.NewPos(float32(x), float32(y)+3)) {
 				if isNormal {
 					currentPos = newPos
 					cells[y+1][x].FillColor = color
