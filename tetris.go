@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"math"
 	"math/rand"
 	"time"
 
@@ -98,31 +99,31 @@ func containsPos(slice []fyne.Position, value fyne.Position) bool {
 //	})
 var previousPositions []fyne.Position
 
-func clearRow(cells [][]*canvas.Rectangle, y int) {
-	rowTally := 0
-	fmt.Println("running clear")
-	for _, existingCell := range previousPositions {
-		fmt.Println("existing cells")
-		fmt.Println(existingCell.Y)
-		fmt.Println("y:")
-		fmt.Println(y)
-		if existingCell.Y == float32(y) {
-			fmt.Println("matches y (cells)")
-			rowTally++
-		}
-	}
-	fmt.Println(rowTally)
-	if rowTally == gridWidth {
-		fmt.Println("rowTally and gridWidth match")
-		for _, existingCell := range previousPositions {
-			if existingCell.Y == float32(y) {
-				fmt.Println("matched Y")
-				cells[int(existingCell.Y)][int(existingCell.X)].FillColor = rgbaGrayColor
-				// existingCell.FillColor = rgbaGrayColor
-			}
-		}
-	}
-}
+// func clearRow(cells [][]*canvas.Rectangle, y int) {
+// 	rowTally := 0
+// 	fmt.Println("running clear")
+// 	for _, existingCell := range previousPositions {
+// 		fmt.Println("existing cells")
+// 		fmt.Println(existingCell.Y)
+// 		fmt.Println("y:")
+// 		fmt.Println(y)
+// 		if existingCell.Y == float32(y) {
+// 			fmt.Println("matches y (cells)")
+// 			rowTally++
+// 		}
+// 	}
+// 	fmt.Println(rowTally)
+// 	if rowTally == gridWidth {
+// 		fmt.Println("rowTally and gridWidth match")
+// 		for _, existingCell := range previousPositions {
+// 			if existingCell.Y == float32(y) {
+// 				fmt.Println("matched Y")
+// 				cells[int(existingCell.Y)][int(existingCell.X)].FillColor = rgbaGrayColor
+// 				// existingCell.FillColor = rgbaGrayColor
+// 			}
+// 		}
+// 	}
+// }
 
 // func clearRow(cells [][]*canvas.Rectangle, y int) {
 // 	rowTally := 0
@@ -329,6 +330,120 @@ func removePos(positions []fyne.Position, pos fyne.Position) []fyne.Position {
 	}
 	return positions
 }
+
+var heightMapping = make(map[int]map[int]int)
+
+// func printMinValue() {
+// 	// Check if the number of entries in the map is less than gridWidth
+// 	if len(heightMapping) < gridWidth {
+// 		fmt.Println(0)
+// 		return
+// 	}
+
+// 	// Find the minimum value in the map
+// 	minValue := math.MaxInt32
+// 	for _, value := range heightMapping {
+// 		if value < minValue {
+// 			minValue = value
+// 		}
+// 	}
+
+//		// Print the minimum value if valid
+//		if minValue == math.MaxInt32 {
+//			fmt.Println(0)
+//		} else {
+//			fmt.Println(minValue)
+//		}
+//	}
+func findMinValue(m map[int]int) (int, error) {
+	if len(m) == 0 {
+		return 0, fmt.Errorf("map is empty")
+	}
+
+	maxValue := math.MaxInt // Start with the maximum possible integer value
+
+	for _, value := range m {
+		if value < maxValue {
+			maxValue = value
+		}
+	}
+
+	return maxValue, nil
+}
+func findMaxValue(m map[int]int) (int, error) {
+	if len(m) == 0 {
+		return 0, fmt.Errorf("map is empty")
+	}
+
+	// Start with the minimum possible integer value
+	maxValue := math.MinInt
+
+	for _, value := range m {
+		if value > maxValue {
+			maxValue = value
+		}
+	}
+
+	return maxValue, nil
+}
+
+// }
+func clearRows(cells [][]*canvas.Rectangle) {
+	fmt.Println(heightMapping)
+	// minimum, _ := findMinValue(heightMapping)
+	maximum, _ := findMaxValue(heightMapping[len(heightMapping)])
+	fmt.Println(maximum)
+	// fmt.Println(minimum)
+	// if minimum != 1 {
+	// fmt.Println("A")
+	// for i := minimum; i == 0; i-- {
+	for i := maximum; i < gridHeight; i++ {
+		// fmt.Println(20 - max(i, 1))
+		// for _, cell := range cells[i] {
+		// 	// cell.FillColor = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+		// 	// cell.Refresh()
+		// }
+	}
+
+	//}
+}
+
+// func clearRows(cells [][]*canvas.Rectangle) {
+// 	// for _, height := range heightMapping {
+// 	// fmt.Println(min(heightMapping))
+// 	// minimum, _ := findMinValue(heightMapping)
+// 	// fmt.Println(minimum)
+// 	// }
+// 	// printMinValue()
+// 	// Track filled rows
+// 	// filledRows := make(map[int]bool)
+
+// 	// // Find the maximum height for each column
+// 	// for _, height := range heightMapping {
+// 	// 	for y := 0; y <= height; y++ {
+// 	// 		filledRows[y] = true
+// 	// 	}
+// 	//}
+// 	// fmt.Println(filledRows)
+// 	// // Check if all cells in each row are filled
+// 	// for y := range filledRows {
+// 	// 	rowFilled := true
+// 	// 	for x := 0; x < len(cells[y]); x++ {
+// 	// 		if cells[y][x] == nil || cells[y][x].FillColor != rgbaGrayColor {
+// 	// 			rowFilled = false
+// 	// 			break
+// 	// 		}
+// 	// 	}
+// 	// 	if rowFilled {
+// 	// 		// Clear the row
+// 	// 		for x := 0; x < len(cells[y]); x++ {
+// 	// 			cells[y][x].FillColor = rgbaGrayColor
+// 	// 			cells[y][x].Refresh()
+// 	// 		}
+// 	// 	}
+// 	// }
+// }
+
 func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
 	var doesContainPos bool
 
@@ -341,7 +456,11 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 
 	if previousPositionsHasBottom == false {
 		previousPositionsHasBottom = true
+		if _, exists := heightMapping[0]; !exists {
+			heightMapping[0] = make(map[int]int)
+		}
 		for i := 0; i < gridWidth; i++ {
+			heightMapping[0][i] = 0
 			previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(limit)+1))
 		}
 	}
@@ -357,26 +476,26 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		}
 
 		newGroupCells := []fyne.Position{}
-		// if isNormal {
-		// Step 1: Mark cells to be cleared
-		for _, pos := range groupCells {
-			x, y := int(pos.X), int(pos.Y)
+		if isNormal {
+			// Step 1: Mark cells to be cleared
+			for _, pos := range groupCells {
+				x, y := int(pos.X), int(pos.Y)
 
-			// Mark cell for clearing if it's within bounds
-			if y < len(cells) && x < len(cells[y]) {
-				toBeCleared[pos] = true
+				// Mark cell for clearing if it's within bounds
+				if y < len(cells) && x < len(cells[y]) {
+					toBeCleared[pos] = true
+				}
+			}
+
+			// Step 2: Clear the marked cells
+			for pos := range toBeCleared {
+				x, y := int(pos.X), int(pos.Y)
+				if y < len(cells) && x < len(cells[y]) {
+					cells[y][x].FillColor = rgbaGrayColor
+					cells[y][x].Refresh()
+				}
 			}
 		}
-
-		// Step 2: Clear the marked cells
-		for pos := range toBeCleared {
-			x, y := int(pos.X), int(pos.Y)
-			if y < len(cells) && x < len(cells[y]) {
-				cells[y][x].FillColor = rgbaGrayColor
-				cells[y][x].Refresh()
-			}
-		}
-		//}
 		// for i := 0; i < 2; i++ {
 		// Step 3: Move cells down and track new positions
 		for _, pos := range groupCells {
@@ -384,77 +503,49 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 			if y+1 < len(cells) && x < len(cells[y+1]) {
 				var newPos fyne.Position
 				newPos = fyne.NewPos(float32(x), float32(y+1))
-				// if isNormal {
-				// 	newPos = fyne.NewPos(float32(x), float32(y+1))
-				// } else {
-				// 	var doesPass bool
-				// 	for _, cell := range currentGroup {
-				// 		if pos == cell {
-				// 			doesPass = true
-				// 		}
-				// 	}
-				// 	if doesPass {
-				// 		newPos = fyne.NewPos(float32(x), float32(y))
-				// 	} else {
-				// 		newPos = fyne.NewPos(float32(x), float32(y+1))
-				// 	}
-				// }
+
 				oldPos := fyne.NewPos(float32(x), float32(y))
 				if !isNormal {
 					allignmentPos = removePos(allignmentPos, oldPos)
 					allignmentPos = append(allignmentPos, newPos)
 				}
-				// if previousX != -1 {
-				// 	if x < previousX {
-				// 		newPos = fyne.NewPos(float32(previousX)-1, float32(y)+1)
-				// 	} else if x > previousX {
-				// 		newPos = fyne.NewPos(float32(previousX)+1, float32(y)+1)
-				// 	}
-				// } else {
-				// 	previousX = x
-				// }
 
 				if containsPos(previousPositions, newPos) {
 					doesContainPos = true
-					//if containsPos(previousPositions, newPos) || containsPos(previousPositions, newPos) && (containsPos(previousPositions, fyne.NewPos(float32(x)-1, float32(y)+1)) || containsPos(previousPositions, fyne.NewPos(float32(x)+1, float32(y)+1))) {
-					// if containsPos(previousPositions, newPos) || (containsPos(previousPositions, fyne.NewPos(float32(x)-1, float32(y)+1)) &&
-					// 	containsPos(previousPositions, fyne.NewPos(float32(x)-1, float32(y)))) ||
-					// 	(containsPos(previousPositions, fyne.NewPos(float32(x)+1, float32(y)+1)) &&
-					// 		containsPos(previousPositions, fyne.NewPos(float32(x)+1, float32(y)))) {
-					// (containsPos(previousPositions, fyne.NewPos(float32(x)-1, float32(y)+1)) &&
-					//  !containsPos(previousPositions, fyne.NewPos(float32(x)-1, float32(y)))) ||
-					// (containsPos(previousPositions, fyne.NewPos(float32(x)+1, float32(y)+1)) &&
-					//  !containsPos(previousPositions, fyne.NewPos(float32(x)+1, float32(y)))) {
 					if isNormal {
-						// for _, cell := range newGroupCells {
-						// 	previousPositions = append(previousPositions, fyne.NewPos(cell.X, cell.Y-1))
-						// 	// fmt.Println(fyne.NewPos(cell.X, cell.Y-1))
-						// }
-						// fmt.Println(allignmentPos)
-						yAllignsArr := []int{}
+						//fmt.Println(allignmentPos)
 						for _, cell := range allignmentPos {
-							yAllignsArr = append(yAllignsArr, int(cell.Y))
+							//fmt.Println(heightMapping[int(cell.X)], i73333333-nt(cell.Y))
+							// fmt.Println(gridHeight - int(cell.X))
+							// heightMapping[int(cell.X)] = heightMapping[int(cell.X)] + 1
+							for _, sections := range heightMapping {
+								if sections[int(cell.X)]+1 == int(cell.Y) {
+									sections[int(cell.X)] = int(cell.Y)
+								} else {
+									heightMapping[int(cell.Y)][int(cell.X)] = int(cell.Y)
+								}
+							}
 						}
-						if len(yAllignsArr) > 1 {
+						//yAllignsArr := []int{}
 
-							// minVal := minArr(yAllignsArr)
-							// maxVal := maxArr(yAllignsArr)
-							// fmt.Println(minVal, maxVal)
-							// for _, cell := range allignmentPos {
-							// 	if cell.Y == float32(minVal) {
-							// 		cells[int(cell.Y)][int(cell.X)].FillColor = color
-							// 		cells[int(cell.Y)][int(cell.X)].Refresh()
-							// 	}
-							// }
+						// 	//yAllignsArr = append(yAllignsArr, int(cell.Y))
+						// }
+						// minValue := math.MaxInt
 
-							// if minVal == maxVal {
-							// 	fmt.Println("matches")
-							// 	for _, cell := range cells[y] {
-							// 		cell.FillColor = rgbaGrayColor
-							// 		cell.Refresh()
-							// 	}
-							// }
-						}
+						// // Loop through the map to find the minimum value
+						// for _, value := range heightMapping {
+						// 	if value < minValue {
+						// 		minValue = value
+						// 	}
+						// }
+						// fmt.Println(minValue)
+						// for _, cell := range cells[minValue] {
+						// 	cell.FillColor = rgbaGrayColor
+						// 	cell.Refresh()
+						// }
+						// if len(yAllignsArr) > 1 {
+						// 	//heightMapping[x] =
+						// }
 						allignmentPos = []fyne.Position{}
 					}
 					// fmt.Println(globalLimit - y)
@@ -474,25 +565,25 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 				// if isNormal {
 				// currentPos = newPos
 				// }
-				cells[y+1][x].FillColor = color
-				cells[y+1][x].Refresh()
+				// cells[y+1][x].FillColor = color
+				// cells[y+1][x].Refresh()
 				if isNormal {
 					if doesContainPos {
 						for _, cell := range groupCells {
 							previousPositions = append(previousPositions, cell)
 						}
 					}
-					// cells[y+1][x].FillColor = color
-					// cells[y+1][x].Refresh()
+					cells[y+1][x].FillColor = color
+					cells[y+1][x].Refresh()
 					// fmt.Println(groupCells)
 					// fmt.Println(newPos)
 					// }
 				} else {
-					if doesContainPos {
-						time.Sleep(100 * time.Millisecond)
-						cells[y+1][x].FillColor = rgbaGrayColor
-						cells[y+1][x].Refresh()
-					}
+					// if doesContainPos {
+					// 	time.Sleep(100 * time.Millisecond)
+					// 	cells[y+1][x].FillColor = rgbaGrayColor
+					// 	cells[y+1][x].Refresh()
+					// }
 				}
 
 				newGroupCells = append(newGroupCells, newPos)
@@ -500,7 +591,9 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 			}
 		}
 		// }
-
+		if isNormal {
+			clearRows(cells)
+		}
 		// Step 4: Update groupCells with new positions
 		groupCells = newGroupCells
 		if isNormal {
@@ -510,7 +603,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		toBeCleared = make(map[fyne.Position]bool)
 
 		// Delay to visualize the falling effect
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 }
 
@@ -536,10 +629,11 @@ func makeLine(cells [][]*canvas.Rectangle, randNum int, color color.Color, param
 	cells[1][randNum].Refresh()
 	pos2 := fyne.NewPos(float32(randNum), 1)
 	groupCells = append(groupCells, pos2)
-	cells[1][randNum+1].FillColor = color
-	cells[1][randNum+1].Refresh()
-	pos3 := fyne.NewPos(float32(randNum+1), 1)
-	groupCells = append(groupCells, pos3)
+	// fmt.Println(randNum)
+	// cells[1][randNum+1].FillColor = color
+	// cells[1][randNum+1].Refresh()
+	// pos3 := fyne.NewPos(float32(randNum+1), 1)
+	// groupCells = append(groupCells, pos3)
 	time.Sleep(1 * time.Second)
 	fall(cells, groupCells, color, true, params, 15)
 }
@@ -583,14 +677,14 @@ func applyRandomColors(grid *fyne.Container, cells [][]*canvas.Rectangle) {
 			Length: 10,
 			// Initialize other fields if needed
 		}
-		randNum := rand.Intn(10)
+		randNum := rand.Intn(gridWidth)
 		color := randomColor()
 		// currentCell = cells[0][randNum]
 		// makeSquare(cells, randNum, color)
 		actions := []cellsParams{
 			makeSquare,
-			// makeLine,
-			makeCorner,
+			makeLine,
+			//makeCorner,
 		}
 		if randNum >= 9 || randNum <= 1 {
 			actions = removeAction(actions, 0)
