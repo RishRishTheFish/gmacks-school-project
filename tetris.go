@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	gridWidth  = 10
-	gridHeight = 20
-	cellSize   = 30
+	gridWidth   = 10
+	gridHeight  = 20
+	bottomLimit = 15
+	cellSize    = 30
 )
 
 var randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -55,6 +56,7 @@ var rgbaGrayColor = color.RGBA{
 	B: grayColor.Y,
 	A: 255, // Fully opaque
 }
+var rgbaRedColor = color.RGBA{R: 255, G: 0, B: 0, A: 255}
 
 type ExtraParams struct {
 	Length int
@@ -331,7 +333,7 @@ func removePos(positions []fyne.Position, pos fyne.Position) []fyne.Position {
 	return positions
 }
 
-var heightMapping = make(map[int]int)
+// var heightMapping = make(map[int]int)
 
 // func printMinValue() {
 // 	// Check if the number of entries in the map is less than gridWidth
@@ -381,6 +383,8 @@ func findMaxValue(m map[int]int) (int, error) {
 	for _, value := range m {
 		if value > maxValue {
 			maxValue = value
+			// key.FillColor = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+			// key.Refresh
 		}
 	}
 
@@ -388,25 +392,37 @@ func findMaxValue(m map[int]int) (int, error) {
 }
 
 // }
-func clearRows(cells [][]*canvas.Rectangle) {
-	fmt.Println(heightMapping)
-	// minimum, _ := findMinValue(heightMapping)
-	maximum, _ := findMaxValue(heightMapping)
-	fmt.Println(maximum)
-	// fmt.Println(minimum)
-	// if minimum != 1 {
-	// fmt.Println("A")
-	// for i := minimum; i == 0; i-- {
-	for i := maximum; i < gridHeight; i++ {
-		// fmt.Println(20 - max(i, 1))
-		// for _, cell := range cells[i] {
-		// 	// cell.FillColor = color.RGBA{R: 255, G: 0, B: 0, A: 255}
-		// 	// cell.Refresh()
-		// }
-	}
+// func clearRows(cells [][]*canvas.Rectangle) {
+// 	// 	fmt.Println(heightMapping)
+// 	minimum, _ := findMinValue(heightMapping)
+// 	// maximum, _ := findMaxValue(heightMapping)
+// 	// fmt.Println(maximum)
 
-	//}
-}
+// 	fmt.Println(minimum)
+// 	// // if minimum != 1 {
+// 	// // fmt.Println("A")
+// 	// // for i := minimum; i == 0; i-- {
+// 	// for _, cell := range cells[maximum] {
+// 	// 	cell.FillColor = rgbaRedColor
+// 	// 	cell.Refresh()
+// 	// }
+// 	// for i := maximum; i < gridHeight; i++ {
+// 	// 	// for _, cell := range cells[i] {
+// 	// 	// }
+// 	// 	//cells[i][i].FillColor = rgbaRedColor
+// 	// 	// fmt.Println(20 - max(i, 1))
+// 	// 	// for _, cell := range cells[i] {
+// 	// 	// 	// if cell.Position().Y > float32(maximum) {
+// 	// 	// 	// 	cell.FillColor = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+// 	// 	// 	// 	cell.Refresh()
+// 	// 	// 	// }
+// 	// 	// 	// cell.FillColor = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+// 	// 	// 	// cell.Refresh()
+// 	// 	// }
+// 	// }
+
+// 	//}
+// }
 
 // func clearRows(cells [][]*canvas.Rectangle) {
 // 	// for _, height := range heightMapping {
@@ -457,7 +473,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 	if previousPositionsHasBottom == false {
 		previousPositionsHasBottom = true
 		for i := 0; i < gridWidth; i++ {
-			heightMapping[i] = 0
+			// heightMapping[i] = bottomLimit
 			previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(limit)+1))
 		}
 	}
@@ -495,6 +511,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		}
 		// for i := 0; i < 2; i++ {
 		// Step 3: Move cells down and track new positions
+
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
 			if y+1 < len(cells) && x < len(cells[y+1]) {
@@ -510,15 +527,24 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 				if containsPos(previousPositions, newPos) {
 					doesContainPos = true
 					if isNormal {
-						//fmt.Println(allignmentPos)
-						for _, cell := range allignmentPos {
-							//fmt.Println(heightMapping[int(cell.X)], int(cell.Y))
-							// fmt.Println(gridHeight - int(cell.X))
-							// heightMapping[int(cell.X)] = heightMapping[int(cell.X)] + 1
-							// if heightMapping[int(cell.X)] < int(cell.Y) {
-							heightMapping[int(cell.X)] = int(cell.Y)
-							// }
-						}
+						// fmt.Println(allignmentPos)
+						// for _, cell := range allignmentPos {
+						// 	// heightMapping[int(cell.X)] = int(cell.Y)
+						// 	//fmt.Println(heightMapping[int(cell.X)], int(cell.Y))
+						// 	// fmt.Println(gridHeight - int(cell.X))
+						// 	// heightMapping[int(cell.X)] = heightMapping[int(cell.X)] + 1
+						// 	// fmt.Println(heightMapping[int(cell.X)]-1, int(cell.Y))
+						// 	// heightMapping[int(cell.X)] = int(cell.Y) - 1
+						// 	// if heightMapping[int(cell.X)]-1 == int(cell.Y) {
+						// 	// 	// fmt.Println("the height matches")
+						// 	// 	// cells[int(cell.Y)][int(cell.X)].FillColor = rgbaRedColor
+						// 	// 	// //fyne.NewColor
+						// 	// 	// //color.RGBA{R: 255, G: 0, B: 0, A: 255}
+						// 	// 	// cells[int(cell.Y)][int(cell.X)].Refresh()
+						// 	// 	// heightMapping[int(cell.X)] = int(cell.Y) - 1
+						// 	// }
+						// 	// }
+						// }
 						//yAllignsArr := []int{}
 
 						// 	//yAllignsArr = append(yAllignsArr, int(cell.Y))
@@ -548,6 +574,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 					} else if globalLimit-y < 2 {
 						// The difference between globalLimit and y is less than 2
 						// Your code for this condition goes here
+
 						limit = y
 
 					}
@@ -585,7 +612,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		}
 		// }
 		if isNormal {
-			clearRows(cells)
+			// clearRows(cells)
 		}
 		// Step 4: Update groupCells with new positions
 		groupCells = newGroupCells
@@ -610,7 +637,7 @@ func makeCorner(cells [][]*canvas.Rectangle, randNum int, color color.Color, par
 	pos2 := fyne.NewPos(float32(randNum), 1)
 	groupCells = append(groupCells, pos2)
 	time.Sleep(1 * time.Second)
-	fall(cells, groupCells, color, true, params, 15)
+	fall(cells, groupCells, color, true, params, bottomLimit)
 }
 
 func makeLine(cells [][]*canvas.Rectangle, randNum int, color color.Color, params ExtraParams) {
@@ -628,7 +655,7 @@ func makeLine(cells [][]*canvas.Rectangle, randNum int, color color.Color, param
 	// pos3 := fyne.NewPos(float32(randNum+1), 1)
 	// groupCells = append(groupCells, pos3)
 	time.Sleep(1 * time.Second)
-	fall(cells, groupCells, color, true, params, 15)
+	fall(cells, groupCells, color, true, params, bottomLimit)
 }
 
 func makeSquare(cells [][]*canvas.Rectangle, randNum int, color color.Color, params ExtraParams) {
@@ -649,7 +676,7 @@ func makeSquare(cells [][]*canvas.Rectangle, randNum int, color color.Color, par
 	pos4 := fyne.NewPos(float32(randNum+1), 0)
 	groupCells = append(groupCells, pos4)
 	time.Sleep(1 * time.Second)
-	fall(cells, groupCells, color, true, params, 15)
+	fall(cells, groupCells, color, true, params, bottomLimit)
 }
 
 func removeAction(actions []cellsParams, index int) []cellsParams {
