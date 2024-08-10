@@ -331,7 +331,7 @@ func removePos(positions []fyne.Position, pos fyne.Position) []fyne.Position {
 	return positions
 }
 
-var heightMapping = make(map[int]map[int]int)
+var heightMapping = make(map[int]int)
 
 // func printMinValue() {
 // 	// Check if the number of entries in the map is less than gridWidth
@@ -391,7 +391,7 @@ func findMaxValue(m map[int]int) (int, error) {
 func clearRows(cells [][]*canvas.Rectangle) {
 	fmt.Println(heightMapping)
 	// minimum, _ := findMinValue(heightMapping)
-	maximum, _ := findMaxValue(heightMapping[len(heightMapping)])
+	maximum, _ := findMaxValue(heightMapping)
 	fmt.Println(maximum)
 	// fmt.Println(minimum)
 	// if minimum != 1 {
@@ -456,11 +456,8 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 
 	if previousPositionsHasBottom == false {
 		previousPositionsHasBottom = true
-		if _, exists := heightMapping[0]; !exists {
-			heightMapping[0] = make(map[int]int)
-		}
 		for i := 0; i < gridWidth; i++ {
-			heightMapping[0][i] = 0
+			heightMapping[i] = 0
 			previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(limit)+1))
 		}
 	}
@@ -515,16 +512,12 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 					if isNormal {
 						//fmt.Println(allignmentPos)
 						for _, cell := range allignmentPos {
-							//fmt.Println(heightMapping[int(cell.X)], i73333333-nt(cell.Y))
+							//fmt.Println(heightMapping[int(cell.X)], int(cell.Y))
 							// fmt.Println(gridHeight - int(cell.X))
 							// heightMapping[int(cell.X)] = heightMapping[int(cell.X)] + 1
-							for _, sections := range heightMapping {
-								if sections[int(cell.X)]+1 == int(cell.Y) {
-									sections[int(cell.X)] = int(cell.Y)
-								} else {
-									heightMapping[int(cell.Y)][int(cell.X)] = int(cell.Y)
-								}
-							}
+							// if heightMapping[int(cell.X)] < int(cell.Y) {
+							heightMapping[int(cell.X)] = int(cell.Y)
+							// }
 						}
 						//yAllignsArr := []int{}
 
