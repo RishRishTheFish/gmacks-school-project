@@ -483,10 +483,12 @@ func (cm *ConcurrentMap) Set(key, value int) {
 
 // var maxYForX = NewConcurrentMap()
 var minYForX = NewConcurrentMap()
+var currentY int
 var currentMin int
 var maxMap map[int]int
 
 var rowCounters map[int]int
+var totalGenerations int // Track the total number of generations
 
 func init() {
 	rowCounters = make(map[int]int)
@@ -555,6 +557,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 
 					if !isNormal {
 						minYForX.Set(x, y+1)
+
 					}
 				}
 
@@ -565,36 +568,54 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 						}
 						ensureMapInitialized(&maxMap)
 						maxX, maxY := MaxYPosition(minYForX.data)
+						fmt.Println(y, maxY)
+						if currentMin > maxY {
+							fmt.Println("New generation since last clearing")
+							for x := 0; x < gridWidth; x++ {
+								cells[maxY+1][x].FillColor = rgbaGrayColor
+								cells[maxY+1][x].Refresh()
+								cells[maxY+2][x].FillColor = rgbaGrayColor
+								cells[maxY+2][x].Refresh()
+							}
+							for _, cell := range allignmentPos {
+								if cell.Y < float32(maxY) {
+									fmt.Println("cell size")
+									fmt.Println(cell.Y, maxY)
+									rowCounters[maxY]++
+								}
+							}
+						}
+						if y+1 < maxY {
+							// fmt.Println("A")
+							rowCounters[maxY]--
+						}
 						maxMap[maxX] = maxY
 
 						currentMin = maxY
 						cells[maxY][maxX].FillColor = rgbaRedColor
 						cells[maxY][maxX].Refresh()
 
-						// Update rowCounters
-						for x := 0; x < gridWidth; x++ {
-							if y, exists := maxMap[x]; exists && y == maxY {
-								rowCounters[maxY]++
-							}
-						}
+						// Calculate the difference and print the result
+						// fmt.Println(totalGenerations, currentMin)
+						// result := totalGenerations - (currentMin * 15)
+						// fmt.Printf("Result: %d\n", result)
 
+						// Update rowCounters
+						rowCounters[maxY]++
+						fmt.Println(rowCounters[maxY])
 						// Check for filled rows
-						for row, count := range rowCounters {
-							if count >= gridWidth {
-								fmt.Printf("Row %d is full\n", row)
-								// Clear or update the filled row
-								for x := 0; x < gridWidth; x++ {
-									cells[row][x].FillColor = rgbaGrayColor
-									cells[row][x].Refresh()
-								}
-								delete(rowCounters, row)
-							}
+						if rowCounters[maxY] >= gridWidth-1 {
+							fmt.Printf("Row %d is full\n", maxY)
+							// Clear or update the filled row
+							delete(rowCounters, maxY)
 						}
 					}
 					cells[y+1][x].FillColor = color
 					cells[y+1][x].Refresh()
 				} else {
+
 					// Additional logic for non-normal cells
+
 				}
 
 				newGroupCells = append(newGroupCells, newPos)
@@ -603,6 +624,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 
 		groupCells = newGroupCells
 		if isNormal {
+			// totalGenerations++ // Increment totalGenerations each time fall is run
 			currentGroup = groupCells
 		}
 		toBeCleared = make(map[fyne.Position]bool)
@@ -610,6 +632,7 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		time.Sleep(1 * time.Millisecond)
 	}
 }
+
 func ensureMapInitialized(m *map[int]int) {
 	if *m == nil {
 		*m = make(map[int]int)
@@ -778,6 +801,7 @@ func applyRandomColors(grid *fyne.Container, cells [][]*canvas.Rectangle) {
 
 		// Execute the function at the random index
 		if len(actions) > 0 {
+			totalGenerations++
 			actions[randomIndex](cells, randNum, color, params)
 		}
 	}
