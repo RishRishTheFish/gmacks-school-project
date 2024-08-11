@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -434,73 +435,90 @@ func findMaxValue(m map[int]int) (int, error) {
 // 	// Track filled rows
 // 	// filledRows := make(map[int]bool)
 
-// 	// // Find the maximum height for each column
-// 	// for _, height := range heightMapping {
-// 	// 	for y := 0; y <= height; y++ {
-// 	// 		filledRows[y] = true
-// 	// 	}
-// 	//}
-// 	// fmt.Println(filledRows)
-// 	// // Check if all cells in each row are filled
-// 	// for y := range filledRows {
-// 	// 	rowFilled := true
-// 	// 	for x := 0; x < len(cells[y]); x++ {
-// 	// 		if cells[y][x] == nil || cells[y][x].FillColor != rgbaGrayColor {
-// 	// 			rowFilled = false
-// 	// 			break
-// 	// 		}
-// 	// 	}
-// 	// 	if rowFilled {
-// 	// 		// Clear the row
-// 	// 		for x := 0; x < len(cells[y]); x++ {
-// 	// 			cells[y][x].FillColor = rgbaGrayColor
-// 	// 			cells[y][x].Refresh()
-// 	// 		}
-// 	// 	}
-// 	// }
-// }
+//		// // Find the maximum height for each column
+//		// for _, height := range heightMapping {
+//		// 	for y := 0; y <= height; y++ {
+//		// 		filledRows[y] = true
+//		// 	}
+//		//}
+//		// fmt.Println(filledRows)
+//		// // Check if all cells in each row are filled
+//		// for y := range filledRows {
+//		// 	rowFilled := true
+//		// 	for x := 0; x < len(cells[y]); x++ {
+//		// 		if cells[y][x] == nil || cells[y][x].FillColor != rgbaGrayColor {
+//		// 			rowFilled = false
+//		// 			break
+//		// 		}
+//		// 	}
+//		// 	if rowFilled {
+//		// 		// Clear the row
+//		// 		for x := 0; x < len(cells[y]); x++ {
+//		// 			cells[y][x].FillColor = rgbaGrayColor
+//		// 			cells[y][x].Refresh()
+//		// 		}
+//		// 	}
+//		// }
+//	}
+//
+// ConcurrentMap is a thread-safe wrapper around a map[int]int
+type ConcurrentMap struct {
+	mu   sync.Mutex
+	data map[int]int
+}
+
+// NewConcurrentMap creates a new ConcurrentMap
+func NewConcurrentMap() *ConcurrentMap {
+	return &ConcurrentMap{
+		data: make(map[int]int),
+	}
+}
+
+// Set updates the map with a new value for the given key
+func (cm *ConcurrentMap) Set(key, value int) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	cm.data[key] = value
+}
+
+var maxYForX = NewConcurrentMap()
+var minYForX = NewConcurrentMap()
+var currentMin int
 
 func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
 	var doesContainPos bool
 
-	// previousX := -1
 	if isNormal {
 		globalLimit = 0
 	}
-	// Maintain a set of cells to be cleared
+
 	toBeCleared := make(map[fyne.Position]bool)
 
-	if previousPositionsHasBottom == false {
+	if !previousPositionsHasBottom {
 		previousPositionsHasBottom = true
 		for i := 0; i < gridWidth; i++ {
-			// heightMapping[i] = bottomLimit
 			previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(limit)+1))
 		}
 	}
 
 	for i := 0; i < limit; i++ {
-		if i == 3 && isNormal == true {
+		if i == 3 && isNormal {
 			for i := 0; i < gridWidth; i++ {
 				var tempCellArr []fyne.Position
 				tempCellArr = append(tempCellArr, fyne.NewPos(float32(i), 1))
-				// Start a new fall with its own limit
 				go fall(cells, tempCellArr, randomColor(), false, params, limit)
 			}
 		}
 
 		newGroupCells := []fyne.Position{}
 		if isNormal {
-			// Step 1: Mark cells to be cleared
 			for _, pos := range groupCells {
 				x, y := int(pos.X), int(pos.Y)
-
-				// Mark cell for clearing if it's within bounds
 				if y < len(cells) && x < len(cells[y]) {
 					toBeCleared[pos] = true
 				}
 			}
 
-			// Step 2: Clear the marked cells
 			for pos := range toBeCleared {
 				x, y := int(pos.X), int(pos.Y)
 				if y < len(cells) && x < len(cells[y]) {
@@ -509,16 +527,13 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 				}
 			}
 		}
-		// for i := 0; i < 2; i++ {
-		// Step 3: Move cells down and track new positions
 
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
 			if y+1 < len(cells) && x < len(cells[y+1]) {
-				var newPos fyne.Position
-				newPos = fyne.NewPos(float32(x), float32(y+1))
-
+				newPos := fyne.NewPos(float32(x), float32(y+1))
 				oldPos := fyne.NewPos(float32(x), float32(y))
+
 				if !isNormal {
 					allignmentPos = removePos(allignmentPos, oldPos)
 					allignmentPos = append(allignmentPos, newPos)
@@ -527,106 +542,100 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 				if containsPos(previousPositions, newPos) {
 					doesContainPos = true
 					if isNormal {
-						// fmt.Println(allignmentPos)
-						// for _, cell := range allignmentPos {
-						// 	// heightMapping[int(cell.X)] = int(cell.Y)
-						// 	//fmt.Println(heightMapping[int(cell.X)], int(cell.Y))
-						// 	// fmt.Println(gridHeight - int(cell.X))
-						// 	// heightMapping[int(cell.X)] = heightMapping[int(cell.X)] + 1
-						// 	// fmt.Println(heightMapping[int(cell.X)]-1, int(cell.Y))
-						// 	// heightMapping[int(cell.X)] = int(cell.Y) - 1
-						// 	// if heightMapping[int(cell.X)]-1 == int(cell.Y) {
-						// 	// 	// fmt.Println("the height matches")
-						// 	// 	// cells[int(cell.Y)][int(cell.X)].FillColor = rgbaRedColor
-						// 	// 	// //fyne.NewColor
-						// 	// 	// //color.RGBA{R: 255, G: 0, B: 0, A: 255}
-						// 	// 	// cells[int(cell.Y)][int(cell.X)].Refresh()
-						// 	// 	// heightMapping[int(cell.X)] = int(cell.Y) - 1
-						// 	// }
-						// 	// }
-						// }
-						//yAllignsArr := []int{}
-
-						// 	//yAllignsArr = append(yAllignsArr, int(cell.Y))
-						// }
-						// minValue := math.MaxInt
-
-						// // Loop through the map to find the minimum value
-						// for _, value := range heightMapping {
-						// 	if value < minValue {
-						// 		minValue = value
-						// 	}
-						// }
-						// fmt.Println(minValue)
-						// for _, cell := range cells[minValue] {
-						// 	cell.FillColor = rgbaGrayColor
-						// 	cell.Refresh()
-						// }
-						// if len(yAllignsArr) > 1 {
-						// 	//heightMapping[x] =
-						// }
+						// Your logic for normal cells
 						allignmentPos = []fyne.Position{}
 					}
-					// fmt.Println(globalLimit - y)
-					if isNormal {
-						limit = y // Adjust limit only for this group
-						globalLimit = y
-					} else if globalLimit-y < 2 {
-						// The difference between globalLimit and y is less than 2
-						// Your code for this condition goes here
+					limit = y
+					// if isNormal {
+					// 	limit = y
+					// 	globalLimit = y
+					// } else if globalLimit-y < 2 {
+					// maxYForX.Set(x, y)
+					//// limit = y
+					if !isNormal {
 
-						limit = y
-
+						minYForX.Set(x, y+1)
+						// limit = y
 					}
-
+					//}
 				}
 
-				// Update the cell color and add new position
-				// if isNormal {
-				// currentPos = newPos
-				// }
-				// cells[y+1][x].FillColor = color
-				// cells[y+1][x].Refresh()
 				if isNormal {
 					if doesContainPos {
 						for _, cell := range groupCells {
 							previousPositions = append(previousPositions, cell)
 						}
+						maxX, maxY := MaxYPosition(minYForX.data)
+						if currentMin == maxY+2 {
+							fmt.Println("Matches")
+							fmt.Println(currentMin, maxY)
+							// for _, cell := range cells[currentMin] {
+							// 	cell.FillColor = rgbaRedColor
+							// 	cell.Refresh()
+							// }
+							// for i := maxY; i < gridHeight; i++ {
+							// 	// for _, cell := range cells[i] {
+							// 	// 	cell.FillColor = rgbaRedColor
+							// 	// 	cell.Refresh()
+							// 	// }
+							// 	// for _, cell := range cells[i] {
+							// 	// 	cell.FillColor = color
+							// 	// 	cell.Refresh()
+							// 	// }
+							// }
+						}
+						currentMin = maxY
+						// fmt.Println(maxX, maxY)
+						cells[maxY][maxX].FillColor = rgbaRedColor
+						cells[maxY][maxX].Refresh()
+
+						// for i := maxY; i < gridHeight; i++ {
+						// 	for _, cell := range cells[i] {
+						// 		cell.FillColor = rgbaRedColor
+						// 		cell.Refresh()
+						// 	}
+						// 	for _, cell := range cells[i] {
+						// 		cell.FillColor = color
+						// 		cell.Refresh()
+						// 	}
+						// }
 					}
 					cells[y+1][x].FillColor = color
 					cells[y+1][x].Refresh()
-					// fmt.Println(groupCells)
-					// fmt.Println(newPos)
-					// }
 				} else {
-					// if doesContainPos {
-					// 	time.Sleep(100 * time.Millisecond)
-					// 	cells[y+1][x].FillColor = rgbaGrayColor
-					// 	cells[y+1][x].Refresh()
-					// }
+					// Additional logic for non-normal cells
 				}
 
 				newGroupCells = append(newGroupCells, newPos)
-
 			}
 		}
-		// }
-		if isNormal {
-			// clearRows(cells)
-		}
-		// Step 4: Update groupCells with new positions
+
 		groupCells = newGroupCells
 		if isNormal {
 			currentGroup = groupCells
 		}
-		// Clear `toBeCleared` for the next iteration
 		toBeCleared = make(map[fyne.Position]bool)
 
-		// Delay to visualize the falling effect
 		time.Sleep(1 * time.Millisecond)
 	}
 }
+func MaxYPosition(positions map[int]int) (int, int) {
+	if len(positions) == 0 {
+		return 0, 0 // Return a default value if the map is empty
+	}
 
+	var maxX int
+	maxY := positions[maxX]
+
+	for x, y := range positions {
+		if y > maxY {
+			maxY = y
+			maxX = x
+		}
+	}
+
+	return maxX, maxY
+}
 func makeCorner(cells [][]*canvas.Rectangle, randNum int, color color.Color, params ExtraParams) {
 	cells[0][randNum].FillColor = color
 	cells[0][randNum].Refresh()
