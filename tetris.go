@@ -481,9 +481,16 @@ func (cm *ConcurrentMap) Set(key, value int) {
 	cm.data[key] = value
 }
 
-var maxYForX = NewConcurrentMap()
+// var maxYForX = NewConcurrentMap()
 var minYForX = NewConcurrentMap()
 var currentMin int
+var maxMap map[int]int
+
+var rowCounters map[int]int
+
+func init() {
+	rowCounters = make(map[int]int)
+}
 
 func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
 	var doesContainPos bool
@@ -542,22 +549,13 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 				if containsPos(previousPositions, newPos) {
 					doesContainPos = true
 					if isNormal {
-						// Your logic for normal cells
 						allignmentPos = []fyne.Position{}
 					}
 					limit = y
-					// if isNormal {
-					// 	limit = y
-					// 	globalLimit = y
-					// } else if globalLimit-y < 2 {
-					// maxYForX.Set(x, y)
-					//// limit = y
-					if !isNormal {
 
+					if !isNormal {
 						minYForX.Set(x, y+1)
-						// limit = y
 					}
-					//}
 				}
 
 				if isNormal {
@@ -565,40 +563,33 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 						for _, cell := range groupCells {
 							previousPositions = append(previousPositions, cell)
 						}
+						ensureMapInitialized(&maxMap)
 						maxX, maxY := MaxYPosition(minYForX.data)
-						if currentMin == maxY+2 {
-							fmt.Println("Matches")
-							fmt.Println(currentMin, maxY)
-							// for _, cell := range cells[currentMin] {
-							// 	cell.FillColor = rgbaRedColor
-							// 	cell.Refresh()
-							// }
-							// for i := maxY; i < gridHeight; i++ {
-							// 	// for _, cell := range cells[i] {
-							// 	// 	cell.FillColor = rgbaRedColor
-							// 	// 	cell.Refresh()
-							// 	// }
-							// 	// for _, cell := range cells[i] {
-							// 	// 	cell.FillColor = color
-							// 	// 	cell.Refresh()
-							// 	// }
-							// }
-						}
+						maxMap[maxX] = maxY
+
 						currentMin = maxY
-						// fmt.Println(maxX, maxY)
 						cells[maxY][maxX].FillColor = rgbaRedColor
 						cells[maxY][maxX].Refresh()
 
-						// for i := maxY; i < gridHeight; i++ {
-						// 	for _, cell := range cells[i] {
-						// 		cell.FillColor = rgbaRedColor
-						// 		cell.Refresh()
-						// 	}
-						// 	for _, cell := range cells[i] {
-						// 		cell.FillColor = color
-						// 		cell.Refresh()
-						// 	}
-						// }
+						// Update rowCounters
+						for x := 0; x < gridWidth; x++ {
+							if y, exists := maxMap[x]; exists && y == maxY {
+								rowCounters[maxY]++
+							}
+						}
+
+						// Check for filled rows
+						for row, count := range rowCounters {
+							if count >= gridWidth {
+								fmt.Printf("Row %d is full\n", row)
+								// Clear or update the filled row
+								for x := 0; x < gridWidth; x++ {
+									cells[row][x].FillColor = rgbaGrayColor
+									cells[row][x].Refresh()
+								}
+								delete(rowCounters, row)
+							}
+						}
 					}
 					cells[y+1][x].FillColor = color
 					cells[y+1][x].Refresh()
@@ -619,6 +610,12 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		time.Sleep(1 * time.Millisecond)
 	}
 }
+func ensureMapInitialized(m *map[int]int) {
+	if *m == nil {
+		*m = make(map[int]int)
+	}
+}
+
 func MaxYPosition(positions map[int]int) (int, int) {
 	if len(positions) == 0 {
 		return 0, 0 // Return a default value if the map is empty
@@ -636,6 +633,63 @@ func MaxYPosition(positions map[int]int) (int, int) {
 
 	return maxX, maxY
 }
+
+// func CheckFilledRows(maxMap map[int]int, gridWidth int) []int {
+// 	filledRows := []int{}
+
+// 	minY, maxY := findMinAndMaxY(maxMap)
+
+// 	for row := minY; row <= maxY; row++ {
+// 		filled := true
+// 		for x := 0; x < gridWidth; x++ {
+// 			if y, exists := maxMap[x]; !exists || y != row {
+// 				filled = false
+// 				break
+// 			}
+// 		}
+// 		if filled {
+// 			filledRows = append(filledRows, row)
+// 		}
+// 	}
+
+// 	return filledRows
+// }
+
+// func findMinAndMaxY(maxMap map[int]int) (int, int) {
+// 	minY, maxY := int(^uint(0)>>1), -int(^uint(0)>>1) // Initialize min and max
+
+// 	for _, y := range maxMap {
+// 		if y < minY {
+// 			minY = y
+// 		}
+// 		if y > maxY {
+// 			maxY = y
+// 		}
+// 	}
+
+// 	return minY, maxY
+// }
+
+// fmt.Println(CheckFilledRows(maxMap, gridWidth))
+//
+//	if currentMin == maxY+2 {
+//		fmt.Println("Matches")
+//		fmt.Println(currentMin, maxY)
+//		// for _, cell := range cells[currentMin] {
+//		// 	cell.FillColor = rgbaRedColor
+//		// 	cell.Refresh()
+//		// }
+//		// for i := maxY; i < gridHeight; i++ {
+//		// 	// for _, cell := range cells[i] {
+//		// 	// 	cell.FillColor = rgbaRedColor
+//		// 	// 	cell.Refresh()
+//		// 	// }
+//		// 	// for _, cell := range cells[i] {
+//		// 	// 	cell.FillColor = color
+//		// 	// 	cell.Refresh()
+//		// 	// }
+//		// }
+//	}
 func makeCorner(cells [][]*canvas.Rectangle, randNum int, color color.Color, params ExtraParams) {
 	cells[0][randNum].FillColor = color
 	cells[0][randNum].Refresh()
@@ -711,13 +765,13 @@ func applyRandomColors(grid *fyne.Container, cells [][]*canvas.Rectangle) {
 		// currentCell = cells[0][randNum]
 		// makeSquare(cells, randNum, color)
 		actions := []cellsParams{
-			makeSquare,
+			// makeSquare,
 			makeLine,
 			//makeCorner,
 		}
-		if randNum >= 9 || randNum <= 1 {
-			actions = removeAction(actions, 0)
-		}
+		// if randNum >= 9 || randNum <= 1 {
+		// 	actions = removeAction(actions, 0)
+		// }
 
 		// Pick a random index
 		randomIndex := rand.Intn(max(1, len(actions)))
