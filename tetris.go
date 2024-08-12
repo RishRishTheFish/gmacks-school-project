@@ -489,16 +489,38 @@ var maxMap map[int]int
 
 var rowCounters map[int]int
 var totalGenerations int // Track the total number of generations
+var dontColor bool
 
 func init() {
 	rowCounters = make(map[int]int)
 }
 
-func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
-	var doesContainPos bool
+var latestKeyEvent KeyEvent
+var previousKeyEvent KeyEvent
 
+// var updateToNewKey bool
+
+func fall(cells [][]*canvas.Rectangle,
+	groupCells []fyne.Position,
+	color color.Color,
+	isNormal bool,
+	params ExtraParams,
+	limit int,
+	//keyEventChannel KeyEvent
+) {
+	// go func() {
+	var doesContainPos bool
+	xoffset := 0
 	if isNormal {
 		globalLimit = 0
+		if latestKeyEvent.KeyName != previousKeyEvent.KeyName {
+			previousKeyEvent.KeyName = latestKeyEvent.KeyName
+			switch previousKeyEvent.KeyName {
+			case fyne.KeyLeft:
+				xoffset = -1
+			}
+
+		}
 	}
 
 	toBeCleared := make(map[fyne.Position]bool)
@@ -540,9 +562,12 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
 			if y+1 < len(cells) && x < len(cells[y+1]) {
-				newPos := fyne.NewPos(float32(x), float32(y+1))
+				newPos := fyne.NewPos(float32(x+xoffset), float32(y+1))
 				oldPos := fyne.NewPos(float32(x), float32(y))
 
+				if xoffset != 0 {
+					xoffset = 0
+				}
 				if !isNormal {
 					allignmentPos = removePos(allignmentPos, oldPos)
 					allignmentPos = append(allignmentPos, newPos)
@@ -568,19 +593,15 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 						}
 						ensureMapInitialized(&maxMap)
 						maxX, maxY := MaxYPosition(minYForX.data)
-						fmt.Println(y, maxY)
+						//fmt.Println(y, maxY)
 						if currentMin > maxY {
-							fmt.Println("New generation since last clearing")
-							for x := 0; x < gridWidth; x++ {
-								cells[maxY+1][x].FillColor = rgbaGrayColor
-								cells[maxY+1][x].Refresh()
-								cells[maxY+2][x].FillColor = rgbaGrayColor
-								cells[maxY+2][x].Refresh()
-							}
+							//	fmt.Println("New generation since last clearing")
+
+							dontColor = true
 							for _, cell := range allignmentPos {
 								if cell.Y < float32(maxY) {
-									fmt.Println("cell size")
-									fmt.Println(cell.Y, maxY)
+									//fmt.Println("cell size")
+									//fmt.Println(cell.Y, maxY)
 									rowCounters[maxY]++
 								}
 							}
@@ -592,30 +613,28 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 						maxMap[maxX] = maxY
 
 						currentMin = maxY
+
 						cells[maxY][maxX].FillColor = rgbaRedColor
 						cells[maxY][maxX].Refresh()
 
-						// Calculate the difference and print the result
-						// fmt.Println(totalGenerations, currentMin)
-						// result := totalGenerations - (currentMin * 15)
-						// fmt.Printf("Result: %d\n", result)
-
-						// Update rowCounters
 						rowCounters[maxY]++
 						fmt.Println(rowCounters[maxY])
 						// Check for filled rows
 						if rowCounters[maxY] >= gridWidth-1 {
-							fmt.Printf("Row %d is full\n", maxY)
+							//fmt.Printf("Row %d is full\n", maxY)
 							// Clear or update the filled row
+							for x := 0; x < gridWidth; x++ {
+								// fmt.Println("clearing")
+								cells[maxY-1][x].FillColor = rgbaGrayColor
+								cells[maxY-1][x].Refresh()
+								cells[maxY][x].FillColor = rgbaGrayColor
+								cells[maxY][x].Refresh()
+							}
 							delete(rowCounters, maxY)
 						}
 					}
 					cells[y+1][x].FillColor = color
 					cells[y+1][x].Refresh()
-				} else {
-
-					// Additional logic for non-normal cells
-
 				}
 
 				newGroupCells = append(newGroupCells, newPos)
@@ -632,6 +651,8 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 		time.Sleep(1 * time.Millisecond)
 	}
 }
+
+//}
 
 func ensureMapInitialized(m *map[int]int) {
 	if *m == nil {
@@ -713,7 +734,13 @@ func MaxYPosition(positions map[int]int) (int, int) {
 //		// 	// }
 //		// }
 //	}
-func makeCorner(cells [][]*canvas.Rectangle, randNum int, color color.Color, params ExtraParams) {
+func makeCorner(
+	cells [][]*canvas.Rectangle,
+	randNum int,
+	color color.Color,
+	params ExtraParams,
+	//keyEventChannel KeyEvent
+) {
 	cells[0][randNum].FillColor = color
 	cells[0][randNum].Refresh()
 	pos1 := fyne.NewPos(float32(randNum), 0)
@@ -723,10 +750,24 @@ func makeCorner(cells [][]*canvas.Rectangle, randNum int, color color.Color, par
 	pos2 := fyne.NewPos(float32(randNum), 1)
 	groupCells = append(groupCells, pos2)
 	time.Sleep(1 * time.Second)
-	fall(cells, groupCells, color, true, params, bottomLimit)
+	fall(
+		cells,
+		groupCells,
+		color,
+		true,
+		params,
+		bottomLimit,
+		//keyEventChannel
+	)
 }
 
-func makeLine(cells [][]*canvas.Rectangle, randNum int, color color.Color, params ExtraParams) {
+func makeLine(
+	cells [][]*canvas.Rectangle,
+	randNum int,
+	color color.Color,
+	params ExtraParams,
+	//keyEventChannel KeyEvent
+) {
 	cells[0][randNum].FillColor = color
 	cells[0][randNum].Refresh()
 	pos1 := fyne.NewPos(float32(randNum), 0)
@@ -741,10 +782,23 @@ func makeLine(cells [][]*canvas.Rectangle, randNum int, color color.Color, param
 	// pos3 := fyne.NewPos(float32(randNum+1), 1)
 	// groupCells = append(groupCells, pos3)
 	time.Sleep(1 * time.Second)
-	fall(cells, groupCells, color, true, params, bottomLimit)
+	fall(cells,
+		groupCells,
+		color,
+		true,
+		params,
+		bottomLimit,
+		//keyEventChannel
+	)
 }
 
-func makeSquare(cells [][]*canvas.Rectangle, randNum int, color color.Color, params ExtraParams) {
+func makeSquare(
+	cells [][]*canvas.Rectangle,
+	randNum int,
+	color color.Color,
+	params ExtraParams,
+	//keyEventChannel KeyEvent
+) {
 	cells[0][randNum].FillColor = color
 	cells[0][randNum].Refresh()
 	pos1 := fyne.NewPos(float32(randNum), 0)
@@ -762,7 +816,15 @@ func makeSquare(cells [][]*canvas.Rectangle, randNum int, color color.Color, par
 	pos4 := fyne.NewPos(float32(randNum+1), 0)
 	groupCells = append(groupCells, pos4)
 	time.Sleep(1 * time.Second)
-	fall(cells, groupCells, color, true, params, bottomLimit)
+	fall(
+		cells,
+		groupCells,
+		color,
+		true,
+		params,
+		bottomLimit,
+		//keyEventChannel
+	)
 }
 
 func removeAction(actions []cellsParams, index int) []cellsParams {
@@ -772,7 +834,11 @@ func removeAction(actions []cellsParams, index int) []cellsParams {
 	return append(actions[:index], actions[index+1:]...)
 }
 
-func applyRandomColors(grid *fyne.Container, cells [][]*canvas.Rectangle) {
+func applyRandomColors(
+	grid *fyne.Container,
+	cells [][]*canvas.Rectangle,
+	//keyEventChannel KeyEvent
+) {
 	// for y := 0; y < len(cells); y++ {
 
 	// var currentCell *canvas.Rectangle
@@ -802,7 +868,13 @@ func applyRandomColors(grid *fyne.Container, cells [][]*canvas.Rectangle) {
 		// Execute the function at the random index
 		if len(actions) > 0 {
 			totalGenerations++
-			actions[randomIndex](cells, randNum, color, params)
+			actions[randomIndex](
+				cells,
+				randNum,
+				color,
+				params,
+				//keyEventChannel
+			)
 		}
 	}
 	// randNum := rand.Intn(10)
@@ -866,12 +938,33 @@ func applyRandomColors(grid *fyne.Container, cells [][]*canvas.Rectangle) {
 // 			}
 // 		}
 
-// 		// Wait before applying the next color
-// 		time.Sleep(1)
-// 	}
-// }
+//			// Wait before applying the next color
+//			time.Sleep(1)
+//		}
+//	}
+type KeyEvent struct {
+	KeyName fyne.KeyName
+}
 
-func createTetris() *fyne.Container {
+func listenKeyEvent(
+	w fyne.Window,
+	//keyEventChannel KeyEvent
+) {
+	w.Canvas().SetOnTypedKey(func(keyEvent *fyne.KeyEvent) {
+		latestKeyEvent = KeyEvent{
+			KeyName: keyEvent.Name,
+		}
+	})
+
+}
+func createTetris(w fyne.Window) *fyne.Container {
+	//keyEventChannel := make(chan KeyEvent)
+
+	//	w.Canvas().SetOnTypedKey(func(keyEvent *fyne.KeyEvent) {
+	//		switch keyEvent.Name {
+
+	//		}
+	//	})
 	cells := make([][]*canvas.Rectangle, gridHeight)
 	for y := 0; y < gridHeight; y++ {
 		cells[y] = make([]*canvas.Rectangle, gridWidth) // Initialize the inner slice
@@ -887,7 +980,15 @@ func createTetris() *fyne.Container {
 			grid.Add(bg)
 		}
 	}
-	go applyRandomColors(grid, cells)
+	go applyRandomColors(
+		grid,
+		cells,
+		//keyEventChannel
+	)
+	go listenKeyEvent(
+		w,
+		//keyEventChannel
+	)
 
 	return grid
 }

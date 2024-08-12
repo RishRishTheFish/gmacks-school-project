@@ -185,7 +185,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	}
 	toggleButton4.OnTapped = func() {
 		options.Hide()
-		w.SetContent(createTetris())
+		w.SetContent(createTetris(w))
 	}
 	return root
 }
