@@ -180,8 +180,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 
 	toggleButton3.OnTapped = func() {
 		options.Hide()
-		w.Resize(fyne.NewSize(480, 480))
-		w.SetContent(createGrid())
+		createChess(w)
 	}
 	toggleButton4.OnTapped = func() {
 		options.Hide()
