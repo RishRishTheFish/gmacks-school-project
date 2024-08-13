@@ -585,7 +585,7 @@ func fall(cells [][]*canvas.Rectangle,
 
 					}
 				}
-				// var noColor bool
+
 				if isNormal {
 					if doesContainPos {
 						for _, cell := range groupCells {
@@ -625,7 +625,6 @@ func fall(cells [][]*canvas.Rectangle,
 						fmt.Println(rowCounters[maxY])
 						// Check for filled rows
 						if rowCounters[maxY] >= gridWidth-1 {
-							// noColor = true
 							fmt.Printf("Row %d is full\n", maxY)
 							// Clear or update the filled row
 							for x := 0; x < gridWidth; x++ {
@@ -640,6 +639,10 @@ func fall(cells [][]*canvas.Rectangle,
 					}
 					cells[y+1][x].FillColor = color
 					cells[y+1][x].Refresh()
+				} else {
+
+					// Additional logic for non-normal cells
+
 				}
 
 				newGroupCells = append(newGroupCells, newPos)
