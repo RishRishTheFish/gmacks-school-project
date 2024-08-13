@@ -11,13 +11,15 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/widget"
 )
 
 const (
 	gridWidth   = 10
 	gridHeight  = 20
 	bottomLimit = 15
-	cellSize    = 30
+	cellSize    = 10
 )
 
 var randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -497,6 +499,7 @@ func init() {
 
 var latestKeyEvent KeyEvent
 var previousKeyEvent KeyEvent
+var rowCountersMutex sync.Mutex
 
 func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
 	var doesContainPos bool
@@ -579,19 +582,13 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 						}
 						ensureMapInitialized(&maxMap)
 						maxX, maxY := MaxYPosition(minYForX.data)
-						fmt.Println(y, maxY)
+						// fmt.Println(y, maxY)
 						if currentMin > maxY {
-							fmt.Println("New generation since last clearing")
-							for x := 0; x < gridWidth; x++ {
-								cells[maxY+1][x].FillColor = rgbaGrayColor
-								cells[maxY+1][x].Refresh()
-								cells[maxY+2][x].FillColor = rgbaGrayColor
-								cells[maxY+2][x].Refresh()
-							}
+							// fmt.Println("New generation since last clearing")
 							for _, cell := range allignmentPos {
 								if cell.Y < float32(maxY) {
-									fmt.Println("cell size")
-									fmt.Println(cell.Y, maxY)
+									// fmt.Println("cell size")
+									// fmt.Println(cell.Y, maxY)
 									rowCounters[maxY]++
 								}
 							}
@@ -602,16 +599,31 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 						maxMap[maxX] = maxY
 
 						currentMin = maxY
-						cells[maxY][maxX].FillColor = rgbaRedColor
-						cells[maxY][maxX].Refresh()
+						// cells[maxY][maxX].FillColor = rgbaRedColor
+						// cells[maxY][maxX].Refresh()
 
 						// Update rowCounters
 						rowCounters[maxY]++
-						fmt.Println(rowCounters[maxY])
+						//fmt.Println(rowCounters[maxY])
+						// Use mutex to synchronize access to rowCounters
+						rowCountersMutex.Lock()
+						defer rowCountersMutex.Unlock()
 						// Check for filled rows
-						if rowCounters[maxY] >= gridWidth-1 {
-							fmt.Printf("Row %d is full\n", maxY)
+						if rowCounters[maxY] >= gridWidth {
+							// fmt.Printf("Row %d is full\n", maxY)
 							// Clear or update the filled row
+							go func() {
+								time.Sleep(1 * time.Millisecond)
+								for x := 0; x < gridWidth; x++ {
+									cells[maxY][x].FillColor = rgbaGrayColor
+									cells[maxY][x].Refresh()
+									if maxY-1 >= 0 {
+										cells[maxY-1][x].FillColor = rgbaGrayColor
+										cells[maxY-1][x].Refresh()
+									}
+								}
+								// fall(cells, previousPositions, color, true, params, bottomLimit)
+							}()
 							delete(rowCounters, maxY)
 						}
 					}
@@ -630,8 +642,9 @@ func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.C
 			currentGroup = groupCells
 		}
 		toBeCleared = make(map[fyne.Position]bool)
-
-		time.Sleep(1 * time.Millisecond)
+		if latestKeyEvent.KeyName != fyne.KeySpace {
+			time.Sleep(500 * time.Millisecond)
+		}
 		// } else {
 		// 	// Handle non-normal cases, if necessary
 		// }
@@ -967,13 +980,24 @@ func listenKeyEvent(
 
 }
 func createTetris(w fyne.Window) *fyne.Container {
-	//keyEventChannel := make(chan KeyEvent)
+	//const cellSize = 20 // Set a smaller size for the cells
 
-	//	w.Canvas().SetOnTypedKey(func(keyEvent *fyne.KeyEvent) {
-	//		switch keyEvent.Name {
+	// Create a container for the Tetris game
+	gameContainer := container.NewVBox()
 
-	//		}
-	//	})
+	// Create a header with score and level
+	scoreLabel := widget.NewLabel("Score: 0")
+	levelLabel := widget.NewLabel("Level: 1")
+
+	header := container.NewHBox(
+		layout.NewSpacer(),
+		scoreLabel,
+		layout.NewSpacer(),
+		levelLabel,
+		layout.NewSpacer(),
+	)
+
+	// Create the grid for the Tetris blocks
 	cells := make([][]*canvas.Rectangle, gridHeight)
 	for y := 0; y < gridHeight; y++ {
 		cells[y] = make([]*canvas.Rectangle, gridWidth) // Initialize the inner slice
@@ -984,20 +1008,34 @@ func createTetris(w fyne.Window) *fyne.Container {
 	for y := 0; y < gridHeight; y++ {
 		for x := 0; x < gridWidth; x++ {
 			bg := canvas.NewRectangle(color.Gray{0x30})
-			bg.SetMinSize(fyne.NewSize(cellSize, cellSize*2))
+			bg.SetMinSize(fyne.NewSize(cellSize, cellSize)) // Make cells square
 			cells[y][x] = bg
 			grid.Add(bg)
 		}
 	}
-	go applyRandomColors(
-		grid,
-		cells,
-		//keyEventChannel
-	)
-	go listenKeyEvent(
-		w,
-		//keyEventChannel
+
+	// Wrap the grid in a border and add some padding
+	gridWrapper := container.NewVBox(
+		layout.NewSpacer(),
+		container.NewBorder(nil, nil, layout.NewSpacer(), layout.NewSpacer(), grid),
+		layout.NewSpacer(),
 	)
 
-	return grid
+	// Create a footer with control instructions
+	footer := container.NewHBox(
+		layout.NewSpacer(),
+		widget.NewLabel("Controls: Arrow keys to move, Space to drop"),
+		layout.NewSpacer(),
+	)
+
+	// Combine all elements into the main game container
+	gameContainer.Add(header)
+	gameContainer.Add(gridWrapper)
+	gameContainer.Add(footer)
+
+	// Run the game logic in separate goroutines
+	go applyRandomColors(grid, cells)
+	go listenKeyEvent(w)
+
+	return gameContainer
 }
