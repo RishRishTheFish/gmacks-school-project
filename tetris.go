@@ -498,6 +498,151 @@ func init() {
 var latestKeyEvent KeyEvent
 var previousKeyEvent KeyEvent
 
+func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
+	var doesContainPos bool
+
+	if isNormal {
+		globalLimit = 0
+	}
+
+	toBeCleared := make(map[fyne.Position]bool)
+
+	// Initialize previous positions if not already done
+	if isNormal && !previousPositionsHasBottom {
+		previousPositionsHasBottom = true
+		for i := 0; i < gridWidth; i++ {
+			previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(limit)+1))
+		}
+	}
+
+	for i := 0; i < limit; i++ {
+		if i == 3 && isNormal {
+			for j := 0; j < gridWidth; j++ {
+				var tempCellArr []fyne.Position
+				tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
+				//fmt.Println("falling")
+				go fall(cells, tempCellArr, randomColor(), false, params, limit)
+			}
+		}
+
+		// Update positions based on key events
+		//if isNormal {
+		xoffset := handleKeyEvents(isNormal)
+		newGroupCells := []fyne.Position{}
+
+		// Clear previous positions
+		for _, pos := range groupCells {
+			x, y := int(pos.X), int(pos.Y)
+			if y < len(cells) && x < len(cells[y]) {
+				toBeCleared[pos] = true
+			}
+		}
+
+		for pos := range toBeCleared {
+			x, y := int(pos.X), int(pos.Y)
+			if y < len(cells) && x < len(cells[y]) {
+				cells[y][x].FillColor = rgbaGrayColor
+				cells[y][x].Refresh()
+			}
+		}
+
+		for _, pos := range groupCells {
+			x, y := int(pos.X), int(pos.Y)
+			newX := x + xoffset
+			newY := y + 1
+
+			if newY < len(cells) && newX >= 0 && newX < len(cells[newY]) {
+				newPos := fyne.NewPos(float32(newX), float32(newY))
+				oldPos := fyne.NewPos(float32(x), float32(y))
+
+				if !isNormal {
+					allignmentPos = removePos(allignmentPos, oldPos)
+					allignmentPos = append(allignmentPos, newPos)
+				}
+
+				if containsPos(previousPositions, newPos) {
+					doesContainPos = true
+					if isNormal {
+						allignmentPos = []fyne.Position{}
+					}
+					limit = y
+
+					if !isNormal {
+						minYForX.Set(x, newY)
+					}
+				}
+
+				if isNormal {
+					if doesContainPos {
+						for _, cell := range groupCells {
+							previousPositions = append(previousPositions, cell)
+						}
+						ensureMapInitialized(&maxMap)
+						maxX, maxY := MaxYPosition(minYForX.data)
+						fmt.Println(y, maxY)
+						if currentMin > maxY {
+							fmt.Println("New generation since last clearing")
+							for x := 0; x < gridWidth; x++ {
+								cells[maxY+1][x].FillColor = rgbaGrayColor
+								cells[maxY+1][x].Refresh()
+								cells[maxY+2][x].FillColor = rgbaGrayColor
+								cells[maxY+2][x].Refresh()
+							}
+							for _, cell := range allignmentPos {
+								if cell.Y < float32(maxY) {
+									fmt.Println("cell size")
+									fmt.Println(cell.Y, maxY)
+									rowCounters[maxY]++
+								}
+							}
+						}
+						if newY < maxY {
+							rowCounters[maxY]--
+						}
+						maxMap[maxX] = maxY
+
+						currentMin = maxY
+						cells[maxY][maxX].FillColor = rgbaRedColor
+						cells[maxY][maxX].Refresh()
+
+						// Update rowCounters
+						rowCounters[maxY]++
+						fmt.Println(rowCounters[maxY])
+						// Check for filled rows
+						if rowCounters[maxY] >= gridWidth-1 {
+							fmt.Printf("Row %d is full\n", maxY)
+							// Clear or update the filled row
+							delete(rowCounters, maxY)
+						}
+					}
+					cells[newY][newX].FillColor = color
+					cells[newY][newX].Refresh()
+				} else {
+					// Additional logic for non-normal cells
+				}
+
+				newGroupCells = append(newGroupCells, newPos)
+			}
+		}
+
+		groupCells = newGroupCells
+		if isNormal {
+			currentGroup = groupCells
+		}
+		toBeCleared = make(map[fyne.Position]bool)
+
+		time.Sleep(1 * time.Millisecond)
+		// } else {
+		// 	// Handle non-normal cases, if necessary
+		// }
+	}
+
+	if isNormal {
+		// Reset state for next fall
+		latestKeyEvent = KeyEvent{}
+		//keyProcessed = false
+	}
+}
 func handleKeyEvents(isNormal bool) int {
 	xoffset := 0
 
@@ -512,59 +657,6 @@ func handleKeyEvents(isNormal bool) int {
 	}
 
 	return xoffset
-}
-
-func fall(cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
-	toBeCleared := make(map[fyne.Position]bool)
-
-	for i := 0; i < limit; i++ {
-		xoffset := handleKeyEvents(isNormal)
-		newGroupCells := []fyne.Position{}
-
-		if isNormal {
-			// Clear previous positions
-			for _, pos := range groupCells {
-				x, y := int(pos.X), int(pos.Y)
-				if y < len(cells) && x < len(cells[y]) {
-					toBeCleared[pos] = true
-				}
-			}
-
-			for pos := range toBeCleared {
-				x, y := int(pos.X), int(pos.Y)
-				if y < len(cells) && x < len(cells[y]) {
-					cells[y][x].FillColor = rgbaGrayColor
-					cells[y][x].Refresh()
-				}
-			}
-		}
-
-		for _, pos := range groupCells {
-			x, y := int(pos.X), int(pos.Y)
-			newX := x + xoffset
-
-			if y+1 < len(cells) && newX >= 0 && newX < len(cells[y+1]) {
-				newPos := fyne.NewPos(float32(newX), float32(y+1))
-
-				if isNormal {
-					cells[y+1][newX].FillColor = color
-					cells[y+1][newX].Refresh()
-				}
-
-				newGroupCells = append(newGroupCells, newPos)
-			}
-		}
-
-		groupCells = newGroupCells
-		if isNormal {
-			currentGroup = groupCells
-		}
-		toBeCleared = make(map[fyne.Position]bool)
-		time.Sleep(500 * time.Millisecond)
-	}
-
-	// Ensure latestKeyEvent is reset to detect new key events
-	latestKeyEvent = KeyEvent{}
 }
 
 //}
