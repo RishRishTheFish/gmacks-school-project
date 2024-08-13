@@ -585,7 +585,7 @@ func fall(cells [][]*canvas.Rectangle,
 
 					}
 				}
-
+				// var noColor bool
 				if isNormal {
 					if doesContainPos {
 						for _, cell := range groupCells {
@@ -593,15 +593,19 @@ func fall(cells [][]*canvas.Rectangle,
 						}
 						ensureMapInitialized(&maxMap)
 						maxX, maxY := MaxYPosition(minYForX.data)
-						//fmt.Println(y, maxY)
+						// fmt.Println(y, maxY)
 						if currentMin > maxY {
-							//	fmt.Println("New generation since last clearing")
-
-							dontColor = true
+							fmt.Println("New generation since last clearing")
+							// for x := 0; x < gridWidth; x++ {
+							// 	cells[maxY+1][x].FillColor = rgbaGrayColor
+							// 	cells[maxY+1][x].Refresh()
+							// 	// cells[maxY+2][x].FillColor = rgbaGrayColor
+							// 	// cells[maxY+2][x].Refresh()
+							// }
 							for _, cell := range allignmentPos {
 								if cell.Y < float32(maxY) {
-									//fmt.Println("cell size")
-									//fmt.Println(cell.Y, maxY)
+									// fmt.Println("cell size")
+									fmt.Println(cell.Y, maxY)
 									rowCounters[maxY]++
 								}
 							}
@@ -621,7 +625,8 @@ func fall(cells [][]*canvas.Rectangle,
 						fmt.Println(rowCounters[maxY])
 						// Check for filled rows
 						if rowCounters[maxY] >= gridWidth-1 {
-							//fmt.Printf("Row %d is full\n", maxY)
+							// noColor = true
+							fmt.Printf("Row %d is full\n", maxY)
 							// Clear or update the filled row
 							for x := 0; x < gridWidth; x++ {
 								// fmt.Println("clearing")
