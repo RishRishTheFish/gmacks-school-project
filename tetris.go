@@ -198,26 +198,11 @@ var rowCountersMutex sync.Mutex
 var yoffset int
 
 // var clearLowestPoint int
-
-func fall(
-	grid fyne.Container,
-	cells [][]*canvas.Rectangle,
-	groupCells []fyne.Position,
-	allCells []fyne.Position,
-	color color.Color,
-	isNormal bool,
-	params ExtraParams,
-	limit int,
-) {
-	defer func() {
-		closeOnce.Do(func() {
-			close(stopChan)
-		})
-	}()
-
+func fall(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
 	var doesContainPos bool
+
 	if isNormal {
-		// Initialize or reset limit
+		globalLimit = 0
 	}
 
 	toBeCleared := make(map[fyne.Position]bool)
@@ -231,24 +216,21 @@ func fall(
 	}
 
 	for i := 0; i < limit; i++ {
-		select {
-		case <-stopChan:
-			return // Exit the function if stop is triggered
-		default:
-			// Continue falling
-		}
-
 		if i == 3 && isNormal {
 			for j := 0; j < gridWidth; j++ {
 				var tempCellArr []fyne.Position
 				tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
-				go fall(grid, cells, tempCellArr, tempCellArr, randomColor(), false, params, limit)
+				//fmt.Println("falling")
+				go fall(grid, cells, tempCellArr, randomColor(), false, params, limit)
 			}
 		}
 
+		// Update positions based on key events
+		//if isNormal {
 		xoffset := handleKeyEvents(isNormal)
 		newGroupCells := []fyne.Position{}
 
+		// Clear previous positions
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
 			if y < len(cells) && x < len(cells[y]) {
@@ -292,19 +274,16 @@ func fall(
 
 				if isNormal {
 					if doesContainPos {
-						// Notify other segments to stop
-						closeOnce.Do(func() {
-							close(stopChan)
-						})
-
 						for _, cell := range groupCells {
+							//cell.FillColor = color
+							//cell.Refresh()
 							if len(cells) >= int(cell.Y) && len(cells[int(cell.Y)]) >= int(cell.X) {
 								cells[int(cell.Y)][int(cell.X)].FillColor = color
 								cells[int(cell.Y)][int(cell.X)].Refresh()
 							}
 							previousPositions = append(previousPositions, cell)
 						}
-
+						// ensureMapInitialized(&maxMap)
 						_, maxY := MaxYPosition(minYForX.data, 1)
 
 						for i := params.Length; i > 0; i-- {
@@ -313,26 +292,42 @@ func fall(
 								break
 							}
 						}
-
+						// fmt.Println(y, maxY)
 						if currentMin != maxY {
+							// rowCounters[maxY] = 0
+							// fmt.Println("New generation since last clearing")
+							// if newY < maxY {
+							// 	rowCounters[maxY]++
+							// }
 							for _, cell := range allignmentPos {
 								if cell.Y < float32(maxY) {
+									// fmt.Println("cell size")
+									// fmt.Println(cell.Y, maxY)
 									rowCounters[maxY]++
 								}
 							}
 						}
-
+						//maxMap[maxX] = maxY
 						if newY < maxY {
 							rowCounters[maxY]--
 						}
 						currentMin = maxY
+						fmt.Println(rowCounters[maxY], maxY)
+						// cells[maxY][maxX].FillColor = rgbaRedColor
+						// cells[maxY][maxX].Refresh()
+						// fmt.Println("a")
+						// Update rowCounters
 						rowCounters[maxY]++
-
+						//fmt.Println(rowCounters[maxY])
+						// Use mutex to synchronize access to rowCounters
 						rowCountersMutex.Lock()
 						defer rowCountersMutex.Unlock()
-
+						// Check for filled rows
+						fmt.Println("a")
 						if rowCounters[maxY] >= gridWidth-1 {
 							increaseScore(1)
+							// fmt.Printf("Row %d is full\n", maxY)
+							// Clear or update the filled row
 							go func() {
 								time.Sleep(1 * time.Millisecond)
 								for x := 0; x < gridWidth; x++ {
@@ -345,10 +340,16 @@ func fall(
 										cells[maxY-1][x].Refresh()
 									}
 								}
-								time.Sleep(500 * time.Millisecond) // Delay to prevent early block spawning
+								// fall(cells, previousPositions, color, true, params, bottomLimit)
 							}()
 							delete(rowCounters, maxY)
+
 						}
+						//go makeLine(grid, cells, rand.Intn(gridWidth-1), randomColor(), ExtraParams{})
+						//go applyRandomColors(&grid, cells)
+						// fmt.Println("b")
+					} else {
+						//break
 					}
 					cells[newY][newX].FillColor = color
 					cells[newY][newX].Refresh()
@@ -368,80 +369,56 @@ func fall(
 		if latestKeyEvent.KeyName != fyne.KeySpace {
 			time.Sleep(500 * time.Millisecond)
 		}
+		// } else {
+		// 	// Handle non-normal cases, if necessary
+		// }
 	}
 
 	if isNormal {
+		// Reset state for next fall
 		latestKeyEvent = KeyEvent{}
-	}
-}
-func splitAndFall(
-	grid fyne.Container,
-	cells [][]*canvas.Rectangle,
-	groupCells []fyne.Position,
-	color color.Color,
-	params ExtraParams,
-	limit int,
-) {
-	// Create a map to group cells by their X position
-	cellGroups := make(map[int][]fyne.Position)
-	for _, pos := range groupCells {
-		x := int(pos.X)
-		cellGroups[x] = append(cellGroups[x], pos)
-	}
-
-	// Run goroutines for each group of cells with the same X position
-	for _, group := range cellGroups {
-		go fall(grid, cells, group, groupCells, color, true, params, limit)
+		//keyProcessed = false
 	}
 }
 
-func makeLine(
-	grid fyne.Container,
-	cells [][]*canvas.Rectangle,
-	randNum int,
-	color color.Color,
-	params ExtraParams,
-) {
-	cells[0][randNum].FillColor = color
-	cells[0][randNum].Refresh()
-	pos1 := fyne.NewPos(float32(randNum), 0)
-	groupCells := []fyne.Position{pos1}
-	cells[1][randNum].FillColor = color
-	cells[1][randNum].Refresh()
-	pos2 := fyne.NewPos(float32(randNum), 1)
-	groupCells = append(groupCells, pos2)
-	time.Sleep(1 * time.Second)
-	splitAndFall(grid, cells, groupCells, color, params, bottomLimit)
-}
+// _, maxY := MaxYPosition(minYForX.data, 1)
 
-func makeSquare(
-	grid fyne.Container,
-	cells [][]*canvas.Rectangle,
-	randNum int,
-	color color.Color,
-	params ExtraParams,
-) {
-	cells[0][randNum].FillColor = color
-	cells[0][randNum].Refresh()
-	pos1 := fyne.NewPos(float32(randNum), 0)
-	groupCells := []fyne.Position{pos1}
-	cells[1][randNum].FillColor = color
-	cells[1][randNum].Refresh()
-	pos2 := fyne.NewPos(float32(randNum), 1)
-	groupCells = append(groupCells, pos2)
-	if randNum+1 != 10 {
-		cells[1][randNum+1].FillColor = color
-		cells[1][randNum+1].Refresh()
-		pos3 := fyne.NewPos(float32(randNum+1), 1)
-		groupCells = append(groupCells, pos3)
-		cells[0][randNum+1].FillColor = color
-		cells[0][randNum+1].Refresh()
-		pos4 := fyne.NewPos(float32(randNum+1), 0)
-		groupCells = append(groupCells, pos4)
-	}
-	time.Sleep(1 * time.Second)
-	splitAndFall(grid, cells, groupCells, color, params, bottomLimit)
-}
+// for i := params.Length; i > 0; i-- {
+// 	_, maxY = MaxYPosition(minYForX.data, i)
+// 	if gridWidth-rowCounters[maxY] >= i {
+// 		break
+// 	}
+// }
+
+// func splitAndFall(
+// 	grid fyne.Container,
+// 	cells [][]*canvas.Rectangle,
+// 	groupCells []fyne.Position,
+// 	color color.Color,
+// 	params ExtraParams,
+// 	limit int,
+// ) {
+// 	// Create a map to group cells by their X position
+// 	cellGroups := make(map[int][]fyne.Position)
+// 	for _, pos := range groupCells {
+// 		x := int(pos.X)
+// 		cellGroups[x] = append(cellGroups[x], pos)
+// 	}
+
+// 	// Run goroutines for each group of cells with the same X position
+// 	for _, group := range cellGroups {
+// 		go fall(grid, cells, group, groupCells, color, true, params, limit)
+// 	}
+// }
+
+// Example function that modifies the map
+//
+//	func updatePositions(positions map[int]int, x int, y int) {
+//		// Lock the mutex before modifying the map
+//		positionsMutex.Lock()
+//		positions[x] = y
+//		positionsMutex.Unlock()
+//	}
 func makeCorner(
 	grid fyne.Container,
 	cells [][]*canvas.Rectangle,
@@ -450,12 +427,12 @@ func makeCorner(
 	params ExtraParams,
 	//keyEventChannel KeyEvent
 ) {
-	cells[yoffset+0][randNum].FillColor = color
-	cells[yoffset+0][randNum].Refresh()
+	cells[0][randNum].FillColor = color
+	cells[0][randNum].Refresh()
 	pos1 := fyne.NewPos(float32(randNum), 0)
 	groupCells := []fyne.Position{pos1}
-	cells[yoffset+1][randNum].FillColor = color
-	cells[yoffset+1][randNum].Refresh()
+	cells[1][randNum].FillColor = color
+	cells[1][randNum].Refresh()
 	pos2 := fyne.NewPos(float32(randNum), 1)
 	groupCells = append(groupCells, pos2)
 	time.Sleep(1 * time.Second)
@@ -463,6 +440,71 @@ func makeCorner(
 		grid,
 		cells,
 		groupCells,
+		color,
+		true,
+		params,
+		bottomLimit,
+		//keyEventChannel
+	)
+}
+
+func makeLine(
+	grid fyne.Container,
+	cells [][]*canvas.Rectangle,
+	randNum int,
+	color color.Color,
+	params ExtraParams,
+	//keyEventChannel KeyEvent
+) {
+	cells[0][randNum].FillColor = color
+	cells[0][randNum].Refresh()
+	pos1 := fyne.NewPos(float32(randNum), 0)
+	groupCells := []fyne.Position{pos1}
+	cells[1][randNum].FillColor = color
+	cells[1][randNum].Refresh()
+	pos2 := fyne.NewPos(float32(randNum), 1)
+	groupCells = append(groupCells, pos2)
+	time.Sleep(1 * time.Second)
+	fall(
+		grid,
+		cells,
+		groupCells,
+		color,
+		true,
+		params,
+		bottomLimit,
+		//keyEventChannel
+	)
+}
+
+func makeSquare(
+	grid fyne.Container,
+	cells [][]*canvas.Rectangle,
+	randNum int,
+	color color.Color,
+	params ExtraParams,
+	//keyEventChannel KeyEvent
+) {
+	cells[0][randNum].FillColor = color
+	cells[0][randNum].Refresh()
+	pos1 := fyne.NewPos(float32(randNum), 0)
+	groupCells := []fyne.Position{pos1}
+	cells[1][randNum].FillColor = color
+	cells[1][randNum].Refresh()
+	pos2 := fyne.NewPos(float32(randNum), 1)
+	groupCells = append(groupCells, pos2)
+	cells[1][randNum+1].FillColor = color
+	cells[1][randNum+1].Refresh()
+	pos3 := fyne.NewPos(float32(randNum+1), 1)
+	groupCells = append(groupCells, pos3)
+	cells[0][randNum+1].FillColor = color
+	cells[0][randNum+1].Refresh()
+	pos4 := fyne.NewPos(float32(randNum+1), 0)
+	groupCells = append(groupCells, pos4)
+	time.Sleep(1 * time.Second)
+	fall(
+		grid,
+		cells,
 		groupCells,
 		color,
 		true,
