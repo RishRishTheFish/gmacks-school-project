@@ -18,8 +18,8 @@ import (
 
 const (
 	gridWidth   = 10
-	gridHeight  = 30
-	bottomLimit = 20
+	gridHeight  = 20
+	bottomLimit = 13
 	cellSize    = 20
 )
 
@@ -49,8 +49,15 @@ var rgbaRedColor = color.RGBA{R: 255, G: 0, B: 0, A: 255}
 type ExtraParams struct {
 	Length int
 	Type   string
+	//	stopChan  chan bool
+	//	closeOnce sync.Once
 	// Add other fields if needed
 }
+
+var (
+	stopChan  = make(chan bool)
+	closeOnce sync.Once
+)
 
 type cellsParams func(grid fyne.Container, cells [][]*canvas.Rectangle, randNum int, color color.Color, extraParams ExtraParams)
 
@@ -174,7 +181,7 @@ var minYForX = NewConcurrentMap()
 var currentY int
 var currentMin int
 
-// var maxMap map[int]int
+// var //maxMap map[int]int
 
 var rowCounters map[int]int
 var totalGenerations int // Track the total number of generations
@@ -190,13 +197,27 @@ var rowCountersMutex sync.Mutex
 
 var yoffset int
 
-//var clearLowestPoint int
+// var clearLowestPoint int
 
-func fall(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
+func fall(
+	grid fyne.Container,
+	cells [][]*canvas.Rectangle,
+	groupCells []fyne.Position,
+	allCells []fyne.Position,
+	color color.Color,
+	isNormal bool,
+	params ExtraParams,
+	limit int,
+) {
+	defer func() {
+		closeOnce.Do(func() {
+			close(stopChan)
+		})
+	}()
+
 	var doesContainPos bool
-
 	if isNormal {
-		globalLimit = 0
+		// Initialize or reset limit
 	}
 
 	toBeCleared := make(map[fyne.Position]bool)
@@ -205,64 +226,41 @@ func fall(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Po
 	if isNormal && !previousPositionsHasBottom {
 		previousPositionsHasBottom = true
 		for i := 0; i < gridWidth; i++ {
-			previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(bottomLimit)))
+			previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(limit)+1))
 		}
 	}
 
 	for i := 0; i < limit; i++ {
+		select {
+		case <-stopChan:
+			return // Exit the function if stop is triggered
+		default:
+			// Continue falling
+		}
+
 		if i == 3 && isNormal {
 			for j := 0; j < gridWidth; j++ {
 				var tempCellArr []fyne.Position
 				tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
-				// if params.Type == "line" {
-				// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
-				// } else if params.Type == "square" {
-				// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
-				// 	// Append positions for a 2x2 square
-				// 	// if j < gridWidth-1 { // Ensure there's enough space horizontally
-				// 	// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
-				// 	// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j+1), 1))
-				// 	// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 2))
-				// 	// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j+1), 2))
-				// 	// }
-				// }
-				//fmt.Println("falling")
-				go fall(grid, cells, tempCellArr, randomColor(), false, params, limit)
+				go fall(grid, cells, tempCellArr, tempCellArr, randomColor(), false, params, limit)
 			}
 		}
 
-		// Update positions based on key events
-		//if isNormal {
 		xoffset := handleKeyEvents(isNormal)
 		newGroupCells := []fyne.Position{}
 
-		// Clear previous positions
-		// for _, pos := range groupCells {
-		// 	x, y := int(pos.X), int(pos.Y)
-		// 	//fmt.Println(y)
-		// 	if y < len(cells) && x < len(cells[max(yoffset, 0)+y]) {
-		// 		toBeCleared[pos] = true
-		// 	}
-		// }
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
-			//fmt.Println(y)
-			if y < len(cells) && x < len(cells[max(yoffset+y, y)]) {
+			if y < len(cells) && x < len(cells[y]) {
 				toBeCleared[pos] = true
 			}
 		}
-		// for pos := range toBeCleared {
-		// 	x, y := int(pos.X), int(pos.Y)
-		// 	if y < len(cells) && x < len(cells[max(yoffset, 0)+y]) {
-		// 		cells[max(yoffset, 0)+y][x].FillColor = rgbaGrayColor
-		// 		cells[max(yoffset, 0)+y][x].Refresh()
-		// 	}
-		// }
+
 		for pos := range toBeCleared {
 			x, y := int(pos.X), int(pos.Y)
-			if y < len(cells) && x < len(cells[max(yoffset+y, y)]) {
-				cells[max(yoffset+y, y)][x].FillColor = rgbaGrayColor
-				cells[max(yoffset+y, y)][x].Refresh()
+			if y < len(cells) && x < len(cells[y]) {
+				cells[y][x].FillColor = rgbaGrayColor
+				cells[y][x].Refresh()
 			}
 		}
 
@@ -270,29 +268,8 @@ func fall(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Po
 			x, y := int(pos.X), int(pos.Y)
 			newX := x + xoffset
 			newY := y + 1
-			// if clearLowestPoint != -1 {
-			// 	newY++
-			// 	// for _, cell := range previousPositions {
-			// 	// 	if cell.Y == float32(newY) {
-			// 	// 		previousPositions = removePos(previousPositions, cell)
-			// 	// 	}
-			// 	// }
-			// 	// newY--
-			// }
-			// if newY < len(cells)-1 && newX >= 0 && newX < len(cells[yoffset+newY])-1 && clearLowestPoint {
-			// 	for _, cell := range previousPositions {
-			// 		if cell.Y ==
-			// 	}
-			// }
-			// if newY+1 == clearLowestPoint {
-			// 	for _, cell := range previousPositions {
-			// 		if cell.Y == float32(newY) {
-			// 			previousPositions = removePos(previousPositions, cell)
-			// 		}
-			// 	}
-			// }
-			// fmt.Println(newY, clearLowestPoint)
-			if newY < len(cells) && newX >= 0 && newX < len(cells[yoffset+newY]) {
+
+			if newY < len(cells) && newX >= 0 && newX < len(cells[newY]) {
 				newPos := fyne.NewPos(float32(newX), float32(newY))
 				oldPos := fyne.NewPos(float32(x), float32(y))
 
@@ -310,100 +287,71 @@ func fall(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Po
 
 					if !isNormal {
 						minYForX.Set(x, newY)
-						// for i := newY - 1; i < limit; i++ {
-						// 	previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(i)))
-						// }
-						// fmt.Println("prev pos", previousPositions)
 					}
-					// for i := newY; i < limit; i++ { // start of the execution block
-					// 	previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(i)))
-					// 	//fmt.Println("Hello") // prints "Hello" 3 times
-					// }
 				}
 
 				if isNormal {
 					if doesContainPos {
+						// Notify other segments to stop
+						closeOnce.Do(func() {
+							close(stopChan)
+						})
+
 						for _, cell := range groupCells {
-							//cell.FillColor = color
-							//cell.Refresh()
-							if len(cells) >= int(cell.Y) && len(cells[yoffset+int(cell.Y)]) >= int(cell.X) {
-								cells[yoffset+int(cell.Y+1)][int(cell.X)].FillColor = color
-								cells[yoffset+int(cell.Y+1)][int(cell.X)].Refresh()
+							if len(cells) >= int(cell.Y) && len(cells[int(cell.Y)]) >= int(cell.X) {
+								cells[int(cell.Y)][int(cell.X)].FillColor = color
+								cells[int(cell.Y)][int(cell.X)].Refresh()
 							}
 							previousPositions = append(previousPositions, cell)
-							// previousPositions = removePos(previousPositions, fyne.NewPos(cell.X, cell.Y+1))
-							// previousPositions = removePos(previousPositions, fyne.NewPos(cell.X, cell.Y+2))
 						}
-						// fmt.Println(previousPositions)
-						//ensureMapInitialized(&maxMap)
-						maxY := 0
+
+						_, maxY := MaxYPosition(minYForX.data, 1)
+
 						for i := params.Length; i > 0; i-- {
 							_, maxY = MaxYPosition(minYForX.data, i)
-							//fmt.Println(gridWidth-rowCounters[maxY], i)
 							if gridWidth-rowCounters[maxY] >= i {
 								break
 							}
 						}
-						//rowCounters[maxY] -= 2
-						// fmt.Println(y, maxY)
-						//fmt.Println(currentMin, currentY)
-						// if currentMin != maxY {
-						//maxMap[maxX] = maxY
 
-						if newY < maxY && rowCounters[maxY] != 0 {
-							rowCounters[maxY] -= 1
-						}
-						if (rowCounters[maxY] == 0 || currentMin != maxY) && newPos == fyne.NewPos(newPos.X, float32(maxY)) {
-							// fmt.Println("b")
-							// rowCounters[maxY] = 0
-							// fmt.Println("New generation since last clearing")
-							// if newY < maxY {
-							// 	rowCounters[maxY]++
-							// }
+						if currentMin != maxY {
 							for _, cell := range allignmentPos {
 								if cell.Y < float32(maxY) {
-									// fmt.Println("cell size")
-									// fmt.Println(cell.Y, maxY)
-									rowCounters[maxY] += params.Length
+									rowCounters[maxY]++
 								}
 							}
 						}
 
+						if newY < maxY {
+							rowCounters[maxY]--
+						}
 						currentMin = maxY
+						rowCounters[maxY]++
 
-						rowCounters[maxY] += 1
+						rowCountersMutex.Lock()
+						defer rowCountersMutex.Unlock()
 
-						if rowCounters[maxY] >= gridWidth-params.Length && newPos == fyne.NewPos(newPos.X, float32(maxY)) {
+						if rowCounters[maxY] >= gridWidth-1 {
 							increaseScore(1)
-							// fmt.Printf("Row %d is full\n", maxY)
-							// Clear or update the filled row
 							go func() {
-								yoffset += 2
 								time.Sleep(1 * time.Millisecond)
-								// fmt.Println(previousPositions)
-								// fmt.Println(maxY)
 								for x := 0; x < gridWidth; x++ {
-
-									cells[yoffset+maxY-1][x].FillColor = rgbaGrayColor
-									cells[yoffset+maxY-1][x].Refresh()
-									cells[yoffset+maxY][x].FillColor = rgbaGrayColor
-									cells[yoffset+maxY][x].Refresh()
-
+									previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY)-2))
+									cells[maxY][x].FillColor = rgbaGrayColor
+									cells[maxY][x].Refresh()
+									if maxY-1 >= 0 {
+										previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY)-1))
+										cells[maxY-1][x].FillColor = rgbaGrayColor
+										cells[maxY-1][x].Refresh()
+									}
 								}
-								fmt.Println(previousPositions)
-								// fall(cells, previousPositions, color, true, params, bottomLimit)
+								time.Sleep(500 * time.Millisecond) // Delay to prevent early block spawning
 							}()
 							delete(rowCounters, maxY)
-
 						}
-
 					}
-
-					fmt.Println(allignmentPos)
-					if newY != bottomLimit {
-						cells[yoffset+newY][newX].FillColor = color
-						cells[yoffset+newY][newX].Refresh()
-					}
+					cells[newY][newX].FillColor = color
+					cells[newY][newX].Refresh()
 				} else {
 					// Additional logic for non-normal cells
 				}
@@ -417,84 +365,118 @@ func fall(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Po
 			currentGroup = groupCells
 		}
 		toBeCleared = make(map[fyne.Position]bool)
-		if latestKeyEvent.KeyName != fyne.KeySpace && isNormal {
+		if latestKeyEvent.KeyName != fyne.KeySpace {
 			time.Sleep(500 * time.Millisecond)
 		}
-		// } else {
-		// 	// Handle non-normal cases, if necessary
-		// }
-		// fmt.Println(i)
 	}
 
 	if isNormal {
-		// Reset state for next fall
 		latestKeyEvent = KeyEvent{}
-		//keyProcessed = false
-		return
+	}
+}
+func splitAndFall(
+	grid fyne.Container,
+	cells [][]*canvas.Rectangle,
+	groupCells []fyne.Position,
+	color color.Color,
+	params ExtraParams,
+	limit int,
+) {
+	// Create a map to group cells by their X position
+	cellGroups := make(map[int][]fyne.Position)
+	for _, pos := range groupCells {
+		x := int(pos.X)
+		cellGroups[x] = append(cellGroups[x], pos)
+	}
+
+	// Run goroutines for each group of cells with the same X position
+	for _, group := range cellGroups {
+		go fall(grid, cells, group, groupCells, color, true, params, limit)
 	}
 }
 
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-4)))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-1)))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY)-2))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY)-3))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(newY)-3))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(newY)))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(newY)-2))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(newY-1)))
-// cells[yoffset+newY-1][x].FillColor = rgbaGrayColor
-// cells[yoffset+newY-1][x].Refresh()
-// cells[yoffset+newY][x].FillColor = rgbaGrayColor
-// cells[yoffset+newY][x].Refresh()
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-3)))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-2)))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-1)))
-// // if maxY != bottomLimit-1 {
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY)))
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY+1)))
-//}
-// Before clearing previousPositions, find the highest point for each x value
-// highestPoints := make(map[int]float32)
+func makeLine(
+	grid fyne.Container,
+	cells [][]*canvas.Rectangle,
+	randNum int,
+	color color.Color,
+	params ExtraParams,
+) {
+	cells[0][randNum].FillColor = color
+	cells[0][randNum].Refresh()
+	pos1 := fyne.NewPos(float32(randNum), 0)
+	groupCells := []fyne.Position{pos1}
+	cells[1][randNum].FillColor = color
+	cells[1][randNum].Refresh()
+	pos2 := fyne.NewPos(float32(randNum), 1)
+	groupCells = append(groupCells, pos2)
+	time.Sleep(1 * time.Second)
+	splitAndFall(grid, cells, groupCells, color, params, bottomLimit)
+}
 
-// for _, pos := range previousPositions {
-// 	x := int(pos.X)
-// 	y := pos.Y
-// 	if currentY, exists := highestPoints[x]; !exists || y > currentY {
-// 		highestPoints[x] = y
-// 		previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)))
-// 	}
-// }
-
-// // Clear the row and update the cells based on the highest points
-// previousPositions = []fyne.Position{}
-// for i := 0; i < gridWidth; i++ {
-// 	previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(bottomLimit)))
-// }
-
-// // Clearing the row and reapplying the highest positions
-// for x := 0; x < gridWidth; x++ {
-// 	// Clear the row
-// 	cells[yoffset+bottomLimit][x].FillColor = rgbaGrayColor
-// 	cells[yoffset+bottomLimit][x].Refresh()
-
-// 	// Get the highest Y value for this X
-// 	if maxY, exists := highestPoints[x]; exists && maxY < float32(bottomLimit) {
-// 		// Move the cell down to the bottom limit
-// 		cells[yoffset+int(maxY)][x].FillColor = color // Apply the color to the new position
-// 		cells[yoffset+int(maxY)][x].Refresh()
-// 		fmt.Printf("Moving cell from Y=%f to bottom limit X=%d\n", maxY, x) // Debug: Show cell movement
-// 	}
-// }
-
-//	for _, cell := range allignmentPos {
-//		fmt.Println(cell)
-//		if cell.Y != float32(currentMin) {
-//			previousPositions = append(previousPositions, cell)
-//		}
-//	}
-//
-// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-1)))
-// clearLowestPoint = maxY
+func makeSquare(
+	grid fyne.Container,
+	cells [][]*canvas.Rectangle,
+	randNum int,
+	color color.Color,
+	params ExtraParams,
+) {
+	cells[0][randNum].FillColor = color
+	cells[0][randNum].Refresh()
+	pos1 := fyne.NewPos(float32(randNum), 0)
+	groupCells := []fyne.Position{pos1}
+	cells[1][randNum].FillColor = color
+	cells[1][randNum].Refresh()
+	pos2 := fyne.NewPos(float32(randNum), 1)
+	groupCells = append(groupCells, pos2)
+	if randNum+1 != 10 {
+		cells[1][randNum+1].FillColor = color
+		cells[1][randNum+1].Refresh()
+		pos3 := fyne.NewPos(float32(randNum+1), 1)
+		groupCells = append(groupCells, pos3)
+		cells[0][randNum+1].FillColor = color
+		cells[0][randNum+1].Refresh()
+		pos4 := fyne.NewPos(float32(randNum+1), 0)
+		groupCells = append(groupCells, pos4)
+	}
+	time.Sleep(1 * time.Second)
+	splitAndFall(grid, cells, groupCells, color, params, bottomLimit)
+}
+func makeCorner(
+	grid fyne.Container,
+	cells [][]*canvas.Rectangle,
+	randNum int,
+	color color.Color,
+	params ExtraParams,
+	//keyEventChannel KeyEvent
+) {
+	cells[yoffset+0][randNum].FillColor = color
+	cells[yoffset+0][randNum].Refresh()
+	pos1 := fyne.NewPos(float32(randNum), 0)
+	groupCells := []fyne.Position{pos1}
+	cells[yoffset+1][randNum].FillColor = color
+	cells[yoffset+1][randNum].Refresh()
+	pos2 := fyne.NewPos(float32(randNum), 1)
+	groupCells = append(groupCells, pos2)
+	time.Sleep(1 * time.Second)
+	fall(
+		grid,
+		cells,
+		groupCells,
+		groupCells,
+		color,
+		true,
+		params,
+		bottomLimit,
+		//keyEventChannel
+	)
+}
+func removeAction(actions []cellsParams, index int) []cellsParams {
+	if index < 0 || index >= len(actions) {
+		return actions
+	}
+	return append(actions[:index], actions[index+1:]...)
+}
 func moveBlocksDown(cells [][]*canvas.Rectangle, clearedRow int) {
 	// Iterate from the row above the cleared row up to the top of the grid
 	for y := clearedRow - 1; y >= 0; y-- {
@@ -538,43 +520,6 @@ func ensureMapInitialized(m *map[int]int) {
 	}
 }
 
-// var positionsRWMutex sync.RWMutex
-
-// var positions sync.Map
-func MaxYPosition(positions map[int]int, length int) (int, int) {
-	minYForX.mu.Lock()
-	defer minYForX.mu.Unlock()
-
-	if len(positions) == 0 || length <= 0 {
-		return 0, 0 // Return a default value if the map is empty or length is invalid
-	}
-
-	// Create a slice to hold the positions
-	type position struct {
-		x, y int
-	}
-	var posSlice []position
-
-	for x, y := range positions {
-		posSlice = append(posSlice, position{x, y})
-	}
-
-	// Sort the slice by the y value in descending order
-	sort.Slice(posSlice, func(i, j int) bool {
-		return posSlice[i].y > posSlice[j].y
-	})
-
-	// Ensure length does not exceed the number of positions
-	if length > len(posSlice) {
-		length = len(posSlice)
-	}
-
-	// Select the desired maximum position based on the length
-	selectedPos := posSlice[length-1]
-
-	return selectedPos.x, selectedPos.y
-}
-
 // func MaxYPosition(positions map[int]int) (int, int) {
 // 	// Lock the mutex for reading
 // 	// positionsRWMutex.RLock()
@@ -611,108 +556,41 @@ func MaxYPosition(positions map[int]int, length int) (int, int) {
 //		positions[x] = y
 //		positionsMutex.Unlock()
 //	}
-func makeCorner(
-	grid fyne.Container,
-	cells [][]*canvas.Rectangle,
-	randNum int,
-	color color.Color,
-	params ExtraParams,
-	//keyEventChannel KeyEvent
-) {
-	cells[yoffset+0][randNum].FillColor = color
-	cells[yoffset+0][randNum].Refresh()
-	pos1 := fyne.NewPos(float32(randNum), 0)
-	groupCells := []fyne.Position{pos1}
-	cells[yoffset+1][randNum].FillColor = color
-	cells[yoffset+1][randNum].Refresh()
-	pos2 := fyne.NewPos(float32(randNum), 1)
-	groupCells = append(groupCells, pos2)
-	time.Sleep(1 * time.Second)
-	fall(
-		grid,
-		cells,
-		groupCells,
-		color,
-		true,
-		params,
-		bottomLimit,
-		//keyEventChannel
-	)
-}
+// var positionsRWMutex sync.RWMutex
 
-func makeLine(
-	grid fyne.Container,
-	cells [][]*canvas.Rectangle,
-	randNum int,
-	color color.Color,
-	params ExtraParams,
-	//keyEventChannel KeyEvent
-) {
-	cells[0][randNum].FillColor = color
-	cells[0][randNum].Refresh()
-	pos1 := fyne.NewPos(float32(randNum), 0)
-	groupCells := []fyne.Position{pos1}
-	cells[1][randNum].FillColor = color
-	cells[1][randNum].Refresh()
-	pos2 := fyne.NewPos(float32(randNum), 1)
-	groupCells = append(groupCells, pos2)
-	time.Sleep(1 * time.Second)
-	fall(
-		grid,
-		cells,
-		groupCells,
-		color,
-		true,
-		params,
-		bottomLimit,
-		//keyEventChannel
-	)
-}
+// var positions sync.Map
+func MaxYPosition(positions map[int]int, length int) (int, int) {
+	minYForX.mu.Lock()
+	defer minYForX.mu.Unlock()
 
-func makeSquare(
-	grid fyne.Container,
-	cells [][]*canvas.Rectangle,
-	randNum int,
-	color color.Color,
-	params ExtraParams,
-	//keyEventChannel KeyEvent
-) {
-	cells[0][randNum].FillColor = color
-	cells[0][randNum].Refresh()
-	pos1 := fyne.NewPos(float32(randNum), 0)
-	groupCells := []fyne.Position{pos1}
-	cells[1][randNum].FillColor = color
-	cells[1][randNum].Refresh()
-	pos2 := fyne.NewPos(float32(randNum), 1)
-	groupCells = append(groupCells, pos2)
-	if randNum+1 != 10 {
-		cells[1][randNum+1].FillColor = color
-		cells[1][randNum+1].Refresh()
-		pos3 := fyne.NewPos(float32(randNum+1), 1)
-		groupCells = append(groupCells, pos3)
-		cells[0][randNum+1].FillColor = color
-		cells[0][randNum+1].Refresh()
-		pos4 := fyne.NewPos(float32(randNum+1), 0)
-		groupCells = append(groupCells, pos4)
+	if len(positions) == 0 || length <= 0 {
+		return 0, 0 // Return a default value if the map is empty or length is invalid
 	}
-	time.Sleep(1 * time.Second)
-	fall(
-		grid,
-		cells,
-		groupCells,
-		color,
-		true,
-		params,
-		bottomLimit,
-		//keyEventChannel
-	)
-}
 
-func removeAction(actions []cellsParams, index int) []cellsParams {
-	if index < 0 || index >= len(actions) {
-		return actions
+	// Create a slice to hold the positions
+	type position struct {
+		x, y int
 	}
-	return append(actions[:index], actions[index+1:]...)
+	var posSlice []position
+
+	for x, y := range positions {
+		posSlice = append(posSlice, position{x, y})
+	}
+
+	// Sort the slice by the y value in descending order
+	sort.Slice(posSlice, func(i, j int) bool {
+		return posSlice[i].y > posSlice[j].y
+	})
+
+	// Ensure length does not exceed the number of positions
+	if length > len(posSlice) {
+		length = len(posSlice)
+	}
+
+	// Select the desired maximum position based on the length
+	selectedPos := posSlice[length-1]
+
+	return selectedPos.x, selectedPos.y
 }
 func applyRandomColors(
 	grid *fyne.Container,
@@ -909,3 +787,336 @@ func increaseScore(points int) {
 	score += points
 	UpdateScore() // Update the score label after changing the score
 }
+
+// func fall(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
+// 	var doesContainPos bool
+
+// 	if isNormal {
+// 		globalLimit = 0
+// 	}
+
+// 	toBeCleared := make(map[fyne.Position]bool)
+
+// 	// Initialize previous positions if not already done
+// 	if isNormal && !previousPositionsHasBottom {
+// 		previousPositionsHasBottom = true
+// 		for i := 0; i < gridWidth; i++ {
+// 			previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(bottomLimit)))
+// 		}
+// 	}
+
+// 	for i := 0; i < limit; i++ {
+// 		if i == 3 && isNormal {
+// 			for j := 0; j < gridWidth; j++ {
+// 				var tempCellArr []fyne.Position
+// 				tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
+// 				// if params.Type == "line" {
+// 				// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
+// 				// } else if params.Type == "square" {
+// 				// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
+// 				// 	// Append positions for a 2x2 square
+// 				// 	// if j < gridWidth-1 { // Ensure there's enough space horizontally
+// 				// 	// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
+// 				// 	// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j+1), 1))
+// 				// 	// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 2))
+// 				// 	// 	tempCellArr = append(tempCellArr, fyne.NewPos(float32(j+1), 2))
+// 				// 	// }
+// 				// }
+// 				//fmt.Println("falling")
+// 				go fall(grid, cells, tempCellArr, randomColor(), false, params, limit)
+// 			}
+// 		}
+
+// 		// Update positions based on key events
+// 		//if isNormal {
+// 		xoffset := handleKeyEvents(isNormal)
+// 		newGroupCells := []fyne.Position{}
+
+// 		// Clear previous positions
+// 		// for _, pos := range groupCells {
+// 		// 	x, y := int(pos.X), int(pos.Y)
+// 		// 	//fmt.Println(y)
+// 		// 	if y < len(cells) && x < len(cells[max(yoffset, 0)+y]) {
+// 		// 		toBeCleared[pos] = true
+// 		// 	}
+// 		// }
+// 		for _, pos := range groupCells {
+// 			x, y := int(pos.X), int(pos.Y)
+// 			//fmt.Println(y)
+// 			if y < len(cells) && x < len(cells[max(yoffset+y, y)]) {
+// 				toBeCleared[pos] = true
+// 			}
+// 		}
+// 		// for pos := range toBeCleared {
+// 		// 	x, y := int(pos.X), int(pos.Y)
+// 		// 	if y < len(cells) && x < len(cells[max(yoffset, 0)+y]) {
+// 		// 		cells[max(yoffset, 0)+y][x].FillColor = rgbaGrayColor
+// 		// 		cells[max(yoffset, 0)+y][x].Refresh()
+// 		// 	}
+// 		// }
+// 		for pos := range toBeCleared {
+// 			x, y := int(pos.X), int(pos.Y)
+// 			if y < len(cells) && x < len(cells[max(yoffset+y, y)]) {
+// 				cells[max(yoffset+y, y)][x].FillColor = rgbaGrayColor
+// 				cells[max(yoffset+y, y)][x].Refresh()
+// 			}
+// 		}
+
+// 		for _, pos := range groupCells {
+// 			x, y := int(pos.X), int(pos.Y)
+// 			newX := x + xoffset
+// 			newY := y + 1
+
+// 			if newY < len(cells) && newX >= 0 && newX < len(cells[yoffset+newY]) {
+// 				newPos := fyne.NewPos(float32(newX), float32(newY))
+// 				oldPos := fyne.NewPos(float32(x), float32(y))
+
+// 				if !isNormal {
+// 					allignmentPos = removePos(allignmentPos, oldPos)
+// 					allignmentPos = append(allignmentPos, newPos)
+// 				}
+
+// 				if containsPos(previousPositions, newPos) {
+// 					doesContainPos = true
+// 					if isNormal {
+// 						allignmentPos = []fyne.Position{}
+// 					}
+// 					limit = y
+
+// 					if !isNormal {
+// 						minYForX.Set(x, newY)
+// 						// for i := newY - 1; i < limit; i++ {
+// 						// 	previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(i)))
+// 						// }
+// 						// fmt.Println("prev pos", previousPositions)
+// 					}
+// 					// for i := newY; i < limit; i++ { // start of the execution block
+// 					// 	previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(i)))
+// 					// 	//fmt.Println("Hello") // prints "Hello" 3 times
+// 					// }
+// 				}
+
+// 				if isNormal {
+// 					if doesContainPos {
+// 						for _, cell := range groupCells {
+// 							//cell.FillColor = color
+// 							//cell.Refresh()
+// 							if len(cells) >= int(cell.Y) && len(cells[yoffset+int(cell.Y)]) >= int(cell.X) {
+// 								cells[yoffset+int(cell.Y+1)][int(cell.X)].FillColor = color
+// 								cells[yoffset+int(cell.Y+1)][int(cell.X)].Refresh()
+// 							}
+// 							previousPositions = append(previousPositions, cell)
+// 							// previousPositions = removePos(previousPositions, fyne.NewPos(cell.X, cell.Y+1))
+// 							// previousPositions = removePos(previousPositions, fyne.NewPos(cell.X, cell.Y+2))
+// 						}
+// 						// fmt.Println(previousPositions)
+// 						//ensureMapInitialized(&//maxMap)
+// 						maxY := 0
+// 						_, maxY = MaxYPosition(minYForX.data, 1)
+// 						// for i := params.Length; i > 0; i-- {
+// 						// 	_, maxY = MaxYPosition(minYForX.data, i)
+// 						// 	//fmt.Println(gridWidth-rowCounters[maxY], i)
+// 						// 	if gridWidth-rowCounters[maxY] >= i {
+// 						// 		break
+// 						// 	}
+// 						// }
+// 						//rowCounters[maxY] -= 2
+// 						// fmt.Println(y, maxY)
+// 						//fmt.Println(currentMin, currentY)
+// 						// if currentMin != maxY {
+// 						////maxMap[maxX] = maxY
+
+// 						if newY < maxY && rowCounters[maxY] != 0 {
+// 							rowCounters[maxY] -= 1
+// 						}
+// 						if (rowCounters[maxY] == 0 || currentMin != maxY) && newPos == fyne.NewPos(newPos.X, float32(maxY)) {
+// 							// fmt.Println("b")
+// 							// rowCounters[maxY] = 0
+// 							// fmt.Println("New generation since last clearing")
+// 							// if newY < maxY {
+// 							// 	rowCounters[maxY]++
+// 							// }
+// 							for _, cell := range allignmentPos {
+// 								if cell.Y < float32(maxY) {
+// 									// fmt.Println("cell size")
+// 									// fmt.Println(cell.Y, maxY)
+// 									rowCounters[maxY] += params.Length
+// 								}
+// 							}
+// 						}
+
+// 						currentMin = maxY
+
+// 						rowCounters[maxY] += 1
+// 						// /&& newPos == fyne.NewPos(newPos.X, float32(maxY))
+// 						if rowCounters[maxY] >= gridWidth-1 {
+// 							increaseScore(1)
+// 							// for _, cell := range groupCells {
+// 							// 	cells[int(cell.Y)][int(cell.X)].FillColor = color
+// 							// 	cells[int(cell.Y+1)][int(cell.X)].Refresh()
+// 							// 	cells[int(cell.Y+1)][int(cell.X)].FillColor = color
+// 							// 	cells[int(cell.Y+1)][int(cell.X)].Refresh()
+// 							// }
+// 							// fmt.Printf("Row %d is full\n", maxY)
+// 							// Clear or update the filled row
+// 							// go func() {
+// 							//yoffset += 2
+// 							time.Sleep(1 * time.Millisecond)
+// 							// fmt.Println(previousPositions)
+// 							// fmt.Println(maxY)
+// 							for x := 0; x < gridWidth; x++ {
+
+// 								cells[yoffset+maxY-1][x].FillColor = rgbaGrayColor
+// 								cells[yoffset+maxY-1][x].Refresh()
+// 								cells[yoffset+maxY][x].FillColor = rgbaGrayColor
+// 								cells[yoffset+maxY][x].Refresh()
+
+// 							}
+// 							//fmt.Println(previousPositions)
+// 							// fall(cells, previousPositions, color, true, params, bottomLimit)
+// 							// }()
+// 							delete(rowCounters, maxY)
+
+// 						}
+// 					}
+
+// 					fmt.Println(allignmentPos)
+// 					if newY != bottomLimit {
+// 						cells[yoffset+newY][newX].FillColor = color
+// 						cells[yoffset+newY][newX].Refresh()
+// 					}
+// 				} else {
+// 					// Additional logic for non-normal cells
+// 					fmt.Println(pos)
+// 				}
+
+// 				newGroupCells = append(newGroupCells, newPos)
+// 			}
+// 		}
+
+// 		groupCells = newGroupCells
+// 		if isNormal {
+// 			currentGroup = groupCells
+// 		}
+// 		toBeCleared = make(map[fyne.Position]bool)
+// 		if latestKeyEvent.KeyName != fyne.KeySpace {
+// 			time.Sleep(500 * time.Millisecond)
+// 		}
+// 		// } else {
+// 		// 	// Handle non-normal cases, if necessary
+// 		// }
+// 		// fmt.Println(i)
+// 	}
+
+// 	if isNormal {
+// 		// Reset state for next fall
+// 		latestKeyEvent = KeyEvent{}
+// 		//keyProcessed = false
+// 		return
+// 	}
+// }
+
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(yoffset+maxY-3), float32(x)))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(yoffset+maxY-4), float32(x)))
+//fmt.Println(maxY)
+//	if containsPos(previousPositions, fyne.NewPos(float32(newY), float32(x))) {
+//fmt.Println("A")
+// if containsPos(previousPositions, fyne.NewPos(float32(maxY), float32(x))) {
+// 	fmt.Println(true)
+// }
+// if containsPos(previousPositions, fyne.NewPos(float32(maxY-1), float32(x))) {
+// 	fmt.Println(true)
+// }
+// if containsPos(previousPositions, fyne.NewPos(float32(maxY-2), float32(x))) {
+// 	fmt.Println(true)
+// }
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(maxY)+1, float32(x)))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(maxY), float32(x)))
+// fmt.Println(previousPositions)
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(maxY)+1, float32(x)))
+//	}
+// fmt.Println(maxY)
+// limit = maxY + 1
+// if clearLowestPoint != -1 {
+// 	newY++
+// 	// for _, cell := range previousPositions {
+// 	// 	if cell.Y == float32(newY) {
+// 	// 		previousPositions = removePos(previousPositions, cell)
+// 	// 	}
+// 	// }
+// 	// newY--
+// }
+// if newY < len(cells)-1 && newX >= 0 && newX < len(cells[yoffset+newY])-1 && clearLowestPoint {
+// 	for _, cell := range previousPositions {
+// 		if cell.Y ==
+// 	}
+// }
+// if newY+1 == clearLowestPoint {
+// 	for _, cell := range previousPositions {
+// 		if cell.Y == float32(newY) {
+// 			previousPositions = removePos(previousPositions, cell)
+// 		}
+// 	}
+// }
+// fmt.Println(newY, clearLowestPoint)
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-4)))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-1)))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY)-2))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY)-3))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(newY)-3))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(newY)))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(newY)-2))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(newY-1)))
+// cells[yoffset+newY-1][x].FillColor = rgbaGrayColor
+// cells[yoffset+newY-1][x].Refresh()
+// cells[yoffset+newY][x].FillColor = rgbaGrayColor
+// cells[yoffset+newY][x].Refresh()
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-3)))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-2)))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-1)))
+// // if maxY != bottomLimit-1 {
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY)))
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY+1)))
+//}
+// Before clearing previousPositions, find the highest point for each x value
+// highestPoints := make(map[int]float32)
+
+// for _, pos := range previousPositions {
+// 	x := int(pos.X)
+// 	y := pos.Y
+// 	if currentY, exists := highestPoints[x]; !exists || y > currentY {
+// 		highestPoints[x] = y
+// 		previousPositions = append(previousPositions, fyne.NewPos(float32(x), float32(y)))
+// 	}
+// }
+
+// // Clear the row and update the cells based on the highest points
+// previousPositions = []fyne.Position{}
+// for i := 0; i < gridWidth; i++ {
+// 	previousPositions = append(previousPositions, fyne.NewPos(float32(i), float32(bottomLimit)))
+// }
+
+// // Clearing the row and reapplying the highest positions
+// for x := 0; x < gridWidth; x++ {
+// 	// Clear the row
+// 	cells[yoffset+bottomLimit][x].FillColor = rgbaGrayColor
+// 	cells[yoffset+bottomLimit][x].Refresh()
+
+// 	// Get the highest Y value for this X
+// 	if maxY, exists := highestPoints[x]; exists && maxY < float32(bottomLimit) {
+// 		// Move the cell down to the bottom limit
+// 		cells[yoffset+int(maxY)][x].FillColor = color // Apply the color to the new position
+// 		cells[yoffset+int(maxY)][x].Refresh()
+// 		fmt.Printf("Moving cell from Y=%f to bottom limit X=%d\n", maxY, x) // Debug: Show cell movement
+// 	}
+// }
+
+//	for _, cell := range allignmentPos {
+//		fmt.Println(cell)
+//		if cell.Y != float32(currentMin) {
+//			previousPositions = append(previousPositions, cell)
+//		}
+//	}
+//
+// previousPositions = removePos(previousPositions, fyne.NewPos(float32(x), float32(maxY-1)))
+// clearLowestPoint = maxY
