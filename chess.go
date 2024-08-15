@@ -12,7 +12,8 @@ import (
 )
 
 func createGrid(game *chess.Board) *fyne.Container {
-	grid := container.NewGridWithColumns(8)
+	var cells []fyne.CanvasObject
+	//grid := container.New(&boardLayout{}, 8)
 
 	for y := 0; y < 8; y++ {
 		for x := 0; x < 8; x++ {
@@ -24,10 +25,11 @@ func createGrid(game *chess.Board) *fyne.Container {
 			piece := game.Piece(chess.Square(x + (7-y)*8))
 			img := canvas.NewImageFromResource(resourceForPiece(piece))
 			img.FillMode = canvas.ImageFillContain
-			grid.Add(container.NewMax(bg, img))
+			cells = append(cells, container.NewMax(bg, img))
+			//grid.Add(container.NewMax(bg, img))
 		}
 	}
-	return grid
+	return container.New(&boardLayout{}, cells...)
 }
 
 func createChess(w fyne.Window) {
