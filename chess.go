@@ -22,10 +22,9 @@ func createGrid(game *chess.Board) *fyne.Container {
 				bg.FillColor = color.Gray{0xE0}
 			}
 
-			piece := game.Piece(chess.Square(x + (7-y)*8))
-			img := canvas.NewImageFromResource(resourceForPiece(piece))
-			img.FillMode = canvas.ImageFillContain
-			cells = append(cells, container.NewMax(bg, img))
+			//piece := game.Piece(chess.Square(x + (7-y)*8))
+			piece := newPeice(game, chess.Square(x+y*8))
+			cells = append(cells, container.NewMax(bg, piece))
 			//grid.Add(container.NewMax(bg, img))
 		}
 	}
@@ -56,7 +55,7 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 	// Get the initial position and image
 	off := squareToOffset(m.S1())
 	cell := grid.Objects[off].(*fyne.Container)
-	img := cell.Objects[1].(*canvas.Image)
+	img := cell.Objects[1].(*peice)
 
 	// Calculate the absolute position for pos1
 	pos1 := img.Position().Add(cell.Position())
@@ -102,7 +101,7 @@ func refreshGrid(grid *fyne.Container, b *chess.Board) {
 	for _, cell := range grid.Objects {
 		if container, ok := cell.(*fyne.Container); ok {
 			if len(container.Objects) > 1 {
-				if img, ok := container.Objects[1].(*canvas.Image); ok {
+				if img, ok := container.Objects[1].(*peice); ok {
 					p := b.Piece(chess.Square(x + y*8))
 					img.Resource = resourceForPiece(p)
 					img.Refresh()

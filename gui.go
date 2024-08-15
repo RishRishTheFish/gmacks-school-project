@@ -107,36 +107,89 @@ func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject,
 	textbox.Move(fyne.NewPos(leftEdgeRight+padding, size.Height-bottomHeight-40))
 	textbox.Resize(fyne.NewSize(size.Width, textboxHeight))
 }
-
 func makeGUI(w fyne.Window) fyne.CanvasObject {
 	fmt.Println()
+
+	// Create buttons
 	toggleButton1 := widget.NewButton("Toggle Right", nil)
 	toggleButton2 := widget.NewButton("Show options", nil)
 	toggleButton3 := widget.NewButton("Chess", nil)
-	toggleButton4 := widget.NewButton("Tetris-BETA", nil)
-	toggleButton5 := widget.NewButton("Tetris-latest", nil)
+	toggleButton4 := widget.NewButton("Tetris-latest", nil)
+	toggleButton5 := widget.NewButton("Tetris-BETA", nil)
 	toggleButton6 := widget.NewButton("Snake", nil)
 
+	// Define initial positions
+	initialPositions := map[fyne.CanvasObject]float32{
+		toggleButton3: 0,
+		toggleButton5: 40,
+		toggleButton6: 80,
+		toggleButton4: 180, // Starting position of toggleButton4
+	}
+
+	// Apply initial positions to buttons
+	for btn, pos := range initialPositions {
+		btn.Move(fyne.NewPos(0, pos))
+	}
+
+	// Create a slider
+	slider := widget.NewSlider(0, 100)
+
+	// Create a large spacer
+	spacer := widget.NewLabel("")       // Spacer with empty content, large enough to push buttons
+	spacer.Resize(fyne.NewSize(0, 200)) // Adjust size as needed
+
+	// Store the original Y position of toggleButton4
+	originalPosY := initialPositions[toggleButton4]
+	optionsContent := container.NewVBox(
+		slider,
+		toggleButton3,
+		toggleButton5,
+		toggleButton6,
+		spacer, // Add spacer to start with
+		toggleButton4,
+	)
+	// Update positions based on slider value
+	slider.OnChanged = func(value float64) {
+		if value > 0 {
+			// Remove spacer when slider value changes
+			optionsContent.Remove(spacer)
+		}
+
+		for btn, initialY := range initialPositions {
+			if btn != toggleButton4 {
+				// Move buttons except toggleButton4
+				newY := initialY - float32(value)
+				btn.Move(fyne.NewPos(0, newY))
+			}
+		}
+
+		// Move toggleButton4 separately
+		if value >= 50 {
+			// Move toggleButton4 only after halfway
+			newY := originalPosY - (float32(value) - 50) // Adjust position relative to halfway
+			toggleButton4.Move(fyne.NewPos(0, newY))
+		} else {
+			// Return toggleButton4 to original position
+			toggleButton4.Move(fyne.NewPos(0, originalPosY))
+		}
+	}
+
+	// Create content for the options
+
+	options := widget.NewModalPopUp(
+		optionsContent,
+		w.Canvas(),
+	)
+	options.Hide() // Ensure options is hidden initially
+
+	// Define layout containers
 	left := container.NewVBox(
 		widget.NewLabel("Buttons:"),
 		toggleButton1,
 		toggleButton2,
 	)
 
-	enableOptions := false
-
-	right := widget.NewLabel("right")
-	options := widget.NewModalPopUp(
-		container.NewVBox(
-			widget.NewLabel("First option"),
-			toggleButton3,
-			toggleButton4,
-			toggleButton5,
-			toggleButton6,
-		),
-		w.Canvas(),
-	)
-	options.Hide() // Ensure options is hidden initially
+	right := widget.NewLabel("right") // Placeholder for the right section
 
 	singleLineEntry := widget.NewEntry()
 	singleLineEntry.SetPlaceHolder("Enter text...")
@@ -153,23 +206,20 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 		widget.NewSeparator(), widget.NewSeparator(), widget.NewSeparator(),
 	}
 
+	// Create the main container
 	root := container.NewWithoutLayout(top, bottom, left, right, textbox, content, options, dividers[0], dividers[1], dividers[2])
-	// root.Refresh()
+
+	// Function to resize and refresh the layout
 	resizeAndRefresh := func() {
-		setPosAndSize(top, bottom, left, right, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options)
+		setPosAndSize(top, bottom, left, right, textbox, content, dividers, root.Size(), right.Visible(), true, options)
 		root.Refresh()
 	}
-	// right.Hide()
-	// resizeAndRefresh()
-	// right.Show()
-	// resizeAndRefresh()
-	// right.Show()
 
 	root.Resize(fyne.NewSize(800, 600))
 	resizeAndRefresh()
 
+	// Define button actions
 	toggleButton2.OnTapped = func() {
-		enableOptions = true
 		resizeAndRefresh()
 	}
 	toggleButton5.OnTapped = func() {
@@ -196,8 +246,8 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	toggleButton6.OnTapped = func() {
 		options.Hide()
 		w.SetContent(createSnake(w))
-		// w.SetContent(createTetris(w, true))
 	}
+
 	return root
 }
 
