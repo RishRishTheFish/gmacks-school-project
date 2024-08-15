@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
 
 	//	chess "onslow.collage/chess"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	// "./chess"
@@ -108,8 +108,6 @@ func setPosAndSize(top, bottom, left, right, textbox, content fyne.CanvasObject,
 	textbox.Resize(fyne.NewSize(size.Width, textboxHeight))
 }
 func makeGUI(w fyne.Window) fyne.CanvasObject {
-	fmt.Println()
-
 	// Create buttons
 	toggleButton1 := widget.NewButton("Toggle Right", nil)
 	toggleButton2 := widget.NewButton("Show options", nil)
@@ -120,9 +118,9 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 
 	// Define initial positions
 	initialPositions := map[fyne.CanvasObject]float32{
-		toggleButton3: 0,
-		toggleButton5: 40,
-		toggleButton6: 80,
+		toggleButton3: 40,
+		toggleButton5: 80,
+		toggleButton6: 120,
 		toggleButton4: 180, // Starting position of toggleButton4
 	}
 
@@ -132,7 +130,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	}
 
 	// Create a slider
-	slider := widget.NewSlider(0, 100)
+	slider := widget.NewSlider(0, 200)
 
 	// Create a large spacer
 	spacer := widget.NewLabel("")       // Spacer with empty content, large enough to push buttons
@@ -148,6 +146,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 		spacer, // Add spacer to start with
 		toggleButton4,
 	)
+
 	// Update positions based on slider value
 	slider.OnChanged = func(value float64) {
 		if value > 0 {
@@ -164,7 +163,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 		}
 
 		// Move toggleButton4 separately
-		if value >= 50 {
+		if value >= 100 {
 			// Move toggleButton4 only after halfway
 			newY := originalPosY - (float32(value) - 50) // Adjust position relative to halfway
 			toggleButton4.Move(fyne.NewPos(0, newY))
@@ -175,18 +174,38 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	}
 
 	// Create content for the options
-
 	options := widget.NewModalPopUp(
 		optionsContent,
 		w.Canvas(),
 	)
 	options.Hide() // Ensure options is hidden initially
 
-	// Define layout containers
+	// Determine the current system theme (Light or Dark)
+	var themeName string
+	if fyne.CurrentApp().Settings().Theme() == theme.LightTheme() {
+		themeName = "Light"
+	} else {
+		themeName = "Dark"
+	}
+
+	// Create an expanding spacer
+	spacer2 := layout.NewSpacer()
+
+	// Create the square with a label to display the system theme
+	themeLabel := widget.NewLabel(themeName)
+	square := canvas.NewRectangle(color.Gray{Y: 0x88})
+	square.Resize(fyne.NewSize(50, 50)) // Adjust the size of the square as needed
+
+	themeContainer := container.NewCenter(themeLabel)       // Center the label inside the square
+	themeSquare := container.NewMax(square, themeContainer) // Overlay the label on the square
+
+	// Position the square at the bottom left by adding it after the spacer
 	left := container.NewVBox(
 		widget.NewLabel("Buttons:"),
 		toggleButton1,
 		toggleButton2,
+		spacer2,     // This spacer will take up all the space, pushing the themeSquare to the bottom
+		themeSquare, // The square with the theme label
 	)
 
 	right := widget.NewLabel("right") // Placeholder for the right section
@@ -209,9 +228,10 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	// Create the main container
 	root := container.NewWithoutLayout(top, bottom, left, right, textbox, content, options, dividers[0], dividers[1], dividers[2])
 
+	enableOptions := false
 	// Function to resize and refresh the layout
 	resizeAndRefresh := func() {
-		setPosAndSize(top, bottom, left, right, textbox, content, dividers, root.Size(), right.Visible(), true, options)
+		setPosAndSize(top, bottom, left, right, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options)
 		root.Refresh()
 	}
 
@@ -220,6 +240,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 
 	// Define button actions
 	toggleButton2.OnTapped = func() {
+		enableOptions = true
 		resizeAndRefresh()
 	}
 	toggleButton5.OnTapped = func() {
@@ -246,7 +267,32 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	toggleButton6.OnTapped = func() {
 		options.Hide()
 		w.SetContent(createSnake(w))
+
 	}
+
+	// Declare the welcomeModal variable
+	var welcomeModal *widget.PopUp
+
+	// Create the Welcome modal pop-up content
+	welcomeLabel := widget.NewLabel("Welcome to the App!")
+	closeButton := widget.NewButton("Close", func() {
+		welcomeModal.Hide()
+	})
+
+	// Create a vertical box to hold the label and close button
+	welcomeContent := container.NewVBox(
+		welcomeLabel,
+		closeButton,
+	)
+
+	// Create the modal pop-up
+	welcomeModal = widget.NewModalPopUp(
+		welcomeContent,
+		w.Canvas(),
+	)
+
+	// Show the welcome modal when the app starts
+	// welcomeModal.Show()
 
 	return root
 }

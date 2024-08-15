@@ -1,46 +1,50 @@
-//go:generate ../bin/fyne bundle -o chess.go assets
-
 package main
 
 import (
+	"fmt"
+
 	"fyne.io/fyne/v2"
 	"github.com/notnil/chess"
 )
 
-func resourceForPiece(p chess.Piece) fyne.Resource {
-	switch p.Color() {
-	case chess.Black:
-		switch p.Type() {
-		case chess.Pawn:
+func resourceForPiece(c chess.Color, p chess.PieceType) fyne.Resource {
+	// Get the single-letter string representation of the piece type
+	pieceType := p.String()
+	peiceColor := c.String()
+	// fmt.Println(peiceColor)
+	switch peiceColor {
+	case "b":
+		switch pieceType {
+		case "p":
 			return resourceBlackPawnSvg
-		case chess.Rook:
+		case "r":
 			return resourceBlackRookSvg
-		case chess.Knight:
-			return resourceBlackKingSvg
-		case chess.Bishop:
+		case "n":
+			return resourceBlackKnightSvg
+		case "b":
 			return resourceBlackBishopSvg
-		case chess.Queen:
+		case "q":
 			return resourceBlackQueenSvg
-		case chess.King:
+		case "k":
 			return resourceBlackKingSvg
 		}
-	case chess.White:
-		switch p.Type() {
-		case chess.Pawn:
+	case "w":
+		fmt.Println("white")
+		switch pieceType {
+		case "p":
 			return resourceWhitePawnSvg
-		case chess.Rook:
+		case "r":
 			return resourceWhiteRookSvg
-		case chess.Knight:
-			return resourceWhiteKingSvg
-		case chess.Bishop:
+		case "n":
+			return resourceWhiteKnightSvg
+		case "b":
 			return resourceWhiteBishopSvg
-		case chess.Queen:
+		case "q":
 			return resourceWhiteQueenSvg
-		case chess.King:
+		case "k":
 			return resourceWhiteKingSvg
 		}
 	}
 
 	return nil
-	//	return resourceBlackBishopSvg
 }
