@@ -115,6 +115,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	toggleButton3 := widget.NewButton("Chess", nil)
 	toggleButton4 := widget.NewButton("Tetris-BETA", nil)
 	toggleButton5 := widget.NewButton("Tetris-latest", nil)
+	toggleButton6 := widget.NewButton("Snake", nil)
 
 	left := container.NewVBox(
 		widget.NewLabel("Buttons:"),
@@ -131,6 +132,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 			toggleButton3,
 			toggleButton4,
 			toggleButton5,
+			toggleButton6,
 		),
 		w.Canvas(),
 	)
@@ -190,6 +192,11 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	toggleButton4.OnTapped = func() {
 		options.Hide()
 		w.SetContent(createTetris(w, true))
+	}
+	toggleButton6.OnTapped = func() {
+		options.Hide()
+		w.SetContent(createSnake(w))
+		// w.SetContent(createTetris(w, true))
 	}
 	return root
 }
