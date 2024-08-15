@@ -130,6 +130,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 			widget.NewLabel("First option"),
 			toggleButton3,
 			toggleButton4,
+			toggleButton5,
 		),
 		w.Canvas(),
 	)
@@ -170,7 +171,8 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 		resizeAndRefresh()
 	}
 	toggleButton5.OnTapped = func() {
-
+		options.Hide()
+		w.SetContent(createTetris(w, false))
 	}
 	toggleButton1.OnTapped = func() {
 		if right.Visible() {
@@ -187,7 +189,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	}
 	toggleButton4.OnTapped = func() {
 		options.Hide()
-		w.SetContent(createTetris(w))
+		w.SetContent(createTetris(w, true))
 	}
 	return root
 }
