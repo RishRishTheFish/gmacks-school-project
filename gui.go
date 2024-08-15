@@ -113,7 +113,8 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	toggleButton1 := widget.NewButton("Toggle Right", nil)
 	toggleButton2 := widget.NewButton("Show options", nil)
 	toggleButton3 := widget.NewButton("Chess", nil)
-	toggleButton4 := widget.NewButton("Tetris", nil)
+	toggleButton4 := widget.NewButton("Tetris-BETA", nil)
+	toggleButton5 := widget.NewButton("Tetris-latest", nil)
 
 	left := container.NewVBox(
 		widget.NewLabel("Buttons:"),
@@ -168,7 +169,9 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 		enableOptions = true
 		resizeAndRefresh()
 	}
+	toggleButton5.OnTapped = func() {
 
+	}
 	toggleButton1.OnTapped = func() {
 		if right.Visible() {
 			right.Hide()
