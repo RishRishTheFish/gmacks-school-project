@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"fyne.io/fyne/v2"
 	"github.com/notnil/chess"
 )
@@ -29,7 +27,7 @@ func resourceForPiece(c chess.Color, p chess.PieceType) fyne.Resource {
 			return resourceBlackKingSvg
 		}
 	case "w":
-		fmt.Println("white")
+		//fmt.Println("white")
 		switch pieceType {
 		case "p":
 			return resourceWhitePawnSvg

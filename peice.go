@@ -13,9 +13,7 @@ import (
 var moveStart chess.Square = chess.NoSquare
 
 type peice struct {
-	// *canvas.Image
 	widget.Icon
-
 	game   *chess.Game
 	square chess.Square
 	image  *canvas.Image
@@ -25,31 +23,27 @@ func newPeice(g *chess.Game, square chess.Square) *peice {
 	p := g.Position().Board().Piece(square)
 	pt := p.Type()
 	pc := p.Color()
-	fmt.Println(pt, pc)
-
 	resource := resourceForPiece(pc, pt)
-	// fmt.Println(resource)
+
 	if resource == nil {
-		fmt.Println("Warning 2: Resource for piece is nil")
-	} else {
-		// fmt.Println("A")
+		fmt.Println("Warning: Resource for piece is nil")
 	}
+
 	img := canvas.NewImageFromResource(resource)
 	img.FillMode = canvas.ImageFillContain
-	return &peice{
+
+	ret := &peice{
 		game:   g,
 		square: square,
 		image:  img,
 	}
+
+	ret.ExtendBaseWidget(ret)
+	return ret
 }
 
-//	func newPeice(g *chess.Game, square chess.Square) *peice {
-//		p := g.Position().Board().Piece(square)
-//		img := canvas.NewImageFromResource(resourceForPiece(p))
-//		img.FillMode = canvas.ImageFillContain
-//		return &peice{game: g, square: square}
-//	}
 func (p *peice) Tapped(ev *fyne.PointEvent) {
+	fmt.Println("Tapped on square:", p.square)
 	if moveStart == chess.NoSquare {
 		moveStart = p.square
 		return
@@ -62,6 +56,7 @@ func (p *peice) Tapped(ev *fyne.PointEvent) {
 			return
 		}
 	}
+
 	pos := p.game.Position().Board().Piece(p.square)
 	dialog.ShowInformation("Invalid move", "Cannot move piece "+pos.String()+" to square "+p.square.String(), win)
 }
