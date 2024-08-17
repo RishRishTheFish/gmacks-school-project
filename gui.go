@@ -226,7 +226,7 @@ func makeGUI(w fyne.Window) fyne.CanvasObject {
 	}
 
 	// Create the main container
-	root := container.NewWithoutLayout(top, bottom, left, right, textbox, content, options, dividers[0], dividers[1], dividers[2])
+	root := container.NewBorder(top, bottom, left, right, textbox, content, options, dividers[0], dividers[1], dividers[2])
 
 	enableOptions := false
 	// Function to resize and refresh the layout

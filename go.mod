@@ -1,4 +1,4 @@
-module rishay.dutt/onslow.collage
+module rishay.dutt/onslow.collage/gmacks
 
 go 1.22.5
 
