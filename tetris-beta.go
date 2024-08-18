@@ -33,6 +33,25 @@ var rowCountersMutex sync.Mutex
 
 var yoffset int
 
+type ConcurrentMap struct {
+	mu   sync.Mutex
+	data map[int]int
+}
+
+// NewConcurrentMap creates a new ConcurrentMap
+func NewConcurrentMap() *ConcurrentMap {
+	return &ConcurrentMap{
+		data: make(map[int]int),
+	}
+}
+
+// Set updates the map with a new value for the given key
+func (cm *ConcurrentMap) Set(key, value int) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	cm.data[key] = value
+}
+
 // var clearLowestPoint int
 func fallBeta(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
 	var doesContainPos bool

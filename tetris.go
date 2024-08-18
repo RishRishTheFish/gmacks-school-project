@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/widget"
 )
 
 const (
@@ -133,24 +134,6 @@ func removePos(positions []fyne.Position, pos fyne.Position) []fyne.Position {
 // 		}
 // 	}
 
-type ConcurrentMap struct {
-	mu   sync.Mutex
-	data map[int]int
-}
-
-// NewConcurrentMap creates a new ConcurrentMap
-func NewConcurrentMap() *ConcurrentMap {
-	return &ConcurrentMap{
-		data: make(map[int]int),
-	}
-}
-
-// Set updates the map with a new value for the given key
-func (cm *ConcurrentMap) Set(key, value int) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-	cm.data[key] = value
-}
 func colorToRGBA(c color.Color) color.RGBA {
 	r, g, b, a := c.RGBA()
 	return color.RGBA{
@@ -160,104 +143,113 @@ func colorToRGBA(c color.Color) color.RGBA {
 		A: uint8(a >> 8),
 	}
 }
+func rgbaToColor(rgba color.RGBA) color.Color {
+	return color.NRGBA{
+		R: rgba.R,
+		G: rgba.G,
+		B: rgba.B,
+		A: rgba.A,
+	}
+}
 
 func fall(
-	grid fyne.Container,
+	grid *fyne.Container,
 	cells [][]*canvas.Rectangle,
 	groupCells []fyne.Position,
 	clr color.Color,
 	params ExtraParams,
 	bottomLimit int,
-	//keyEventChannel KeyEvent
 ) {
-	rgbaGrayColor := color.RGBA{128, 128, 128, 255} // Example gray color
+	rgbaEmptyColor := color.RGBA{128, 128, 128, 255} // The background or empty cell color
+	blockSettled := false
 
-	for {
+	for !blockSettled {
 		canMoveDown := true
 
 		// Check if the group of cells can move down
 		for _, pos := range groupCells {
 			x, y := int(pos.X), int(pos.Y)
-			if y+1 >= len(cells) || colorToRGBA(cells[y+1][x].FillColor) != colorToRGBA(rgbaGrayColor) {
+			// Check if the next position is within the grid and is empty
+			if y+1 >= len(cells) || colorToRGBA(cells[y+1][x].FillColor) != rgbaEmptyColor {
 				canMoveDown = false
 				break
 			}
 		}
 
-		if !canMoveDown {
-			break
-		}
+		if canMoveDown {
+			// Move the group of cells down
+			newGroupCells := []fyne.Position{}
+			for _, pos := range groupCells {
+				x, y := int(pos.X), int(pos.Y)
+				// Clear current position
+				cells[y][x].FillColor = rgbaEmptyColor
+				cells[y][x].Refresh()
 
-		// Move the group of cells down
-		newGroupCells := []fyne.Position{}
-		for _, pos := range groupCells {
-			x, y := int(pos.X), int(pos.Y)
-			cells[y][x].FillColor = rgbaGrayColor
-			cells[y][x].Refresh()
+				// Move to new position
+				newY := y + 1
+				cells[newY][x].FillColor = clr
+				cells[newY][x].Refresh()
 
-			newY := y + 1
-			cells[newY][x].FillColor = clr
-			cells[newY][x].Refresh()
-
-			newGroupCells = append(newGroupCells, fyne.NewPos(float32(x), float32(newY)))
-		}
-
-		groupCells = newGroupCells
-
-		// Delay for visual effect
-		time.Sleep(200 * time.Millisecond)
-	}
-
-	// Once the cells can no longer move down, fix them in place
-	for _, pos := range groupCells {
-		x, y := int(pos.X), int(pos.Y)
-		cells[y][x].FillColor = clr
-		cells[y][x].Refresh()
-	}
-
-	// Check if any rows are filled and clear them
-	clearFullRows(grid, cells, params)
-}
-
-func clearFullRows(
-	grid fyne.Container,
-	cells [][]*canvas.Rectangle,
-	params ExtraParams,
-) {
-	for y := len(cells) - 1; y >= 0; y-- {
-		isRowFull := true
-		for x := 0; x < len(cells[y]); x++ {
-			if cells[y][x].FillColor == rgbaGrayColor {
-				isRowFull = false
-				break
+				newGroupCells = append(newGroupCells, fyne.NewPos(float32(x), float32(newY)))
 			}
-		}
+			groupCells = newGroupCells
 
-		if isRowFull {
-			// Clear the row
-			for x := 0; x < len(cells[y]); x++ {
-				cells[y][x].FillColor = rgbaGrayColor
+			// Delay for visual effect
+			time.Sleep(200 * time.Millisecond)
+		} else {
+			// The block has settled and can no longer move down
+			blockSettled = true
+
+			// Fix the cells in place with the final color
+			for _, pos := range groupCells {
+				x, y := int(pos.X), int(pos.Y)
+				cells[y][x].FillColor = clr
 				cells[y][x].Refresh()
 			}
 
-			// Move all rows above down by one
-			for yy := y; yy > 0; yy-- {
-				for xx := 0; xx < len(cells[yy]); xx++ {
-					cells[yy][xx].FillColor = cells[yy-1][xx].FillColor
-					cells[yy][xx].Refresh()
-				}
-			}
-
-			// Reset the top row to empty
-			for xx := 0; xx < len(cells[0]); xx++ {
-				cells[0][xx].FillColor = rgbaGrayColor
-				cells[0][xx].Refresh()
-			}
-
-			// Check the same row again after clearing
-			y++
+			// Check if any rows are filled and clear them
+			clearFullRows(grid, cells, params)
 		}
 	}
+}
+func clearFullRows(grid *fyne.Container, cells [][]*canvas.Rectangle, params ExtraParams) {
+	rgbaEmptyColor := color.RGBA{128, 128, 128, 255} // The color of an empty cell
+
+	// Keep track of the rows that are full
+	fullRows := []int{}
+
+	for y := 0; y < len(cells); y++ {
+		isFull := true
+		for x := 0; x < len(cells[y]); x++ {
+			if colorToRGBA(cells[y][x].FillColor) == rgbaEmptyColor {
+				isFull = false
+				break
+			}
+		}
+		if isFull {
+			fullRows = append(fullRows, y)
+		}
+	}
+
+	// Clear each full row
+	for _, row := range fullRows {
+		// Clear the row by shifting rows above it downward
+		for y := row; y > 0; y-- {
+			for x := 0; x < len(cells[y]); x++ {
+				cells[y][x].FillColor = cells[y-1][x].FillColor
+				cells[y][x].Refresh()
+			}
+		}
+
+		// Clear the top row (which is now shifted down)
+		for x := 0; x < len(cells[0]); x++ {
+			cells[0][x].FillColor = rgbaEmptyColor
+			cells[0][x].Refresh()
+		}
+	}
+
+	// Refresh the grid to reflect the changes
+	grid.Refresh()
 }
 
 func makeCorner(
@@ -290,7 +282,7 @@ func makeCorner(
 			//keyEventChannel
 		)
 	} else {
-		fall(grid, cells, groupCells, color, params, bottomLimit)
+		fall(&grid, cells, groupCells, color, params, bottomLimit)
 	}
 }
 
@@ -324,7 +316,7 @@ func makeLine(
 			//keyEventChannel
 		)
 	} else {
-		fall(grid, cells, groupCells, color, params, bottomLimit)
+		fall(&grid, cells, groupCells, color, params, bottomLimit)
 	}
 }
 
@@ -614,12 +606,27 @@ func createTetris(w fyne.Window, doBeta bool) *fyne.Container {
 
 	// Overlay the game UI on top of the background
 	content := container.NewMax(background, gameContainer)
-
+	n := 1
+	widget := widget.NewLabel("Hello World! " + strconv.Itoa(n))
 	// Run the game logic in separate goroutines
-	go applyRandomColors(grid, cells, doBeta)
+	go startRenderLoop(grid, cells, doBeta, 60, func() {
+		n++
+		widget.SetText("Hello World! " + strconv.Itoa(n))
+	})
+	// go applyRandomColors(grid, cells, doBeta)
 	go listenKeyEvent(w)
 
 	return content
+}
+func startRenderLoop(grid *fyne.Container, cells [][]*canvas.Rectangle, doBeta bool, tps int, fn func()) {
+	lastTick := time.Now().UnixNano()
+	for {
+		now := time.Now().UnixNano()
+		for now-lastTick >= int64(1e9/tps) {
+			fn()
+			lastTick += int64(1e9 / tps)
+		}
+	}
 }
 
 // UpdateScore updates the score label with the current score
