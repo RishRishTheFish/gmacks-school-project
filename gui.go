@@ -143,25 +143,28 @@ func returnText(text string) *canvas.Text {
 	return finalText
 }
 
-func makeGUI(w fyne.Window, bgColor *color.RGBA) fyne.CanvasObject {
+func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	var enableOptions bool
-	//theme.Color(theme.ColorNameBackground, theme.Variant)
 	//bgColor := color.RGBA{R: 0xFF, G: 0x69, B: 0xB4, A: 0xFF}
-	bgColor = &color.RGBA{R: 0xFF, G: 0x69, B: 0xB4, A: 0xFF}
-	buttonColor := canvas.NewRectangle(&color.RGBA{R: 0xFF, G: 0x69, B: 0xB4, A: 0xFF})
+	buttonColor := canvas.NewRectangle(colorToRGBA(CustomTheme.buttonColor))
+	// canvas.NewRectangle(&color.RGBA{R: 0xFF, G: 0x69, B: 0xB4, A: 0xFF})
 	//optionsColor := canvas.NewRectangle(bgColor)
-	optionsColor := canvas.NewRectangle(&color.RGBA{R: 0x33, G: 0x99, B: 0xFF, A: 0xFF})
+	optionsColor := canvas.NewRectangle(colorToRGBA(CustomTheme.optionsColor))
+	//canvas.NewRectangle(&color.RGBA{R: 0x33, G: 0x99, B: 0xFF, A: 0xFF})
 	// Create a colored background rectangle
-	sideBarColor := canvas.NewRectangle(&color.RGBA{R: 0x80, G: 0x80, B: 0x80, A: 0xFF}) // Example gray background color
-	topColor := &color.RGBA{R: 0x80, G: 0x80, B: 0x80, A: 0xFF}                          // Example gray background color
-	contentColor := color.RGBA{R: 0x80, G: 0x80, B: 0x80, A: 0xFF}
+	sideBarColor := canvas.NewRectangle(colorToRGBA(CustomTheme.sideBarColor))
+	// canvas.NewRectangle(&color.RGBA{R: 0x80, G: 0x80, B: 0x80, A: 0xFF}) // Example gray background color
+	topColor := colorToRGBA(CustomTheme.topColor)
+	//&color.RGBA{R: 0x80, G: 0x80, B: 0x80, A: 0xFF} // Example gray background color
+	contentColor := colorToRGBA(CustomTheme.contentColor)
+	//color.RGBA{R: 0x80, G: 0x80, B: 0x80, A: 0xFF}
 	themeLabelColor := color.Gray{Y: 0x88}
 
 	right := container.NewMax(widget.NewLabel("right"), canvas.NewRectangle(sideBarColor.FillColor)) // Dereference the pointer
 	bottom := widget.NewLabel("")
 	top := makeBanner(topColor)
 	// Create a rectangle that fills the entire center area
-	centerRect := canvas.NewRectangle(&color.RGBA{R: 0x00, G: 0x80, B: 0x00, A: 0xFF}) // Green rectangle
+	centerRect := canvas.NewRectangle(contentColor) // Green rectangle
 
 	// Make sure the rectangle expands to fill the available space
 	centerRect.Resize(fyne.NewSize(800, 600)) // Adjust this size as needed, or leave it to auto-resize
@@ -215,7 +218,10 @@ func makeGUI(w fyne.Window, bgColor *color.RGBA) fyne.CanvasObject {
 		//fyne.CanvasObject
 		resizeAndRefresh(top, bottom, left, right, centerRect, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
 	}), container.NewMax(buttonColor, returnText("show/hide sidebar")))
-
+	toggleButton7 := container.NewMax(widget.NewButton("", func() {
+		enableOptions = false
+		resizeAndRefresh(top, bottom, left, right, centerRect, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
+	}), container.NewMax(buttonColor, returnText("exit options")))
 	// Define initial positions
 	initialPositions := map[fyne.CanvasObject]float32{
 		toggleButton3: 40,
@@ -243,6 +249,7 @@ func makeGUI(w fyne.Window, bgColor *color.RGBA) fyne.CanvasObject {
 		toggleButton3,
 		toggleButton5,
 		toggleButton6,
+		toggleButton7,
 		spacer, // Add spacer to start with
 		toggleButton4,
 	))

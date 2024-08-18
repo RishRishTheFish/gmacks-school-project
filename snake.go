@@ -16,7 +16,7 @@ import (
 
 const (
 	maxGridSize = 30
-	//cellSize    = 20
+	cellSize    = 20
 )
 
 type SnakeGame struct {

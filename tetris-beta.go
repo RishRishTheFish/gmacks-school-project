@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"math/rand"
+	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,6 +17,113 @@ import (
 var minYForX = NewConcurrentMap()
 var currentY int
 var currentMin int
+var grayColor = color.Gray{Y: 0x30}
+var allignmentPos []fyne.Position
+var previousPositions []fyne.Position
+var rgbaGrayColor = color.RGBA{
+	R: grayColor.Y,
+	G: grayColor.Y,
+	B: grayColor.Y,
+	A: 255, // Fully opaque
+}
+
+func handleKeyEvents(isNormal bool) int {
+	xoffset := 0
+
+	if isNormal && latestKeyEvent != previousKeyEvent {
+		switch latestKeyEvent.KeyName {
+		case fyne.KeyLeft:
+			xoffset = -1
+		case fyne.KeyRight:
+			xoffset = 1
+		}
+		previousKeyEvent = latestKeyEvent
+	}
+
+	return xoffset
+}
+func MaxYPosition(positions map[int]int, length int) (int, int) {
+	minYForX.mu.Lock()
+	defer minYForX.mu.Unlock()
+
+	if len(positions) == 0 || length <= 0 {
+		return 0, 0 // Return a default value if the map is empty or length is invalid
+	}
+
+	// Create a slice to hold the positions
+	type position struct {
+		x, y int
+	}
+	var posSlice []position
+
+	for x, y := range positions {
+		posSlice = append(posSlice, position{x, y})
+	}
+
+	// Sort the slice by the y value in descending order
+	sort.Slice(posSlice, func(i, j int) bool {
+		return posSlice[i].y > posSlice[j].y
+	})
+
+	// Ensure length does not exceed the number of positions
+	if length > len(posSlice) {
+		length = len(posSlice)
+	}
+
+	// Select the desired maximum position based on the length
+	selectedPos := posSlice[length-1]
+
+	return selectedPos.x, selectedPos.y
+}
+func removePos(positions []fyne.Position, pos fyne.Position) []fyne.Position {
+	for i, p := range positions {
+		if p == pos {
+			return append(positions[:i], positions[i+1:]...)
+		}
+	}
+	return positions
+}
+
+var randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func randomColor() color.Color {
+	return color.RGBA{
+		R: uint8(randSource.Intn(256)),
+		G: uint8(randSource.Intn(256)),
+		B: uint8(randSource.Intn(256)),
+		A: uint8(randSource.Intn(256)), // Random alpha value for more variation
+	}
+}
+
+type ExtraParams struct {
+	Length int
+	Type   string
+	//	stopChan  chan bool
+	//	closeOnce sync.Once
+	// Add other fields if needed
+}
+
+const (
+	gridWidth   = 10
+	gridHeight  = 20
+	bottomLimit = 13
+	//cellSize    = 20
+)
+
+var score int
+
+func increaseScore(points int, scoreLabel *canvas.Text) {
+	score += points
+	UpdateScore(scoreLabel) // Update the score label after changing the score
+}
+
+func UpdateScore(scoreLabel *canvas.Text) {
+	scoreLabel.Text = "Score: " + strconv.Itoa(score)
+	canvas.Refresh(scoreLabel)
+}
+
+var previousPositionsHasBottom bool
+var globalLimit int
 
 // var //maxMap map[int]int
 
@@ -25,6 +135,11 @@ var dontColor bool
 func init() {
 	rowCounters = make(map[int]int)
 	squaresInRows = make(map[int]int)
+}
+
+type KeyEvent struct {
+	KeyName   fyne.KeyName
+	Increment int
 }
 
 var latestKeyEvent KeyEvent
@@ -45,15 +160,27 @@ func NewConcurrentMap() *ConcurrentMap {
 	}
 }
 
+var currentGroup []fyne.Position
+
 // Set updates the map with a new value for the given key
 func (cm *ConcurrentMap) Set(key, value int) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	cm.data[key] = value
 }
+func containsPos(slice []fyne.Position, value fyne.Position) bool {
+	if len(slice) > 1 {
+		for _, v := range slice {
+			if v == value {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // var clearLowestPoint int
-func fallBeta(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int) {
+func fallBeta(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyne.Position, color color.Color, isNormal bool, params ExtraParams, limit int, scoreLabel *canvas.Text) {
 	var doesContainPos bool
 
 	if isNormal {
@@ -76,7 +203,7 @@ func fallBeta(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyn
 				var tempCellArr []fyne.Position
 				tempCellArr = append(tempCellArr, fyne.NewPos(float32(j), 1))
 				//fmt.Println("fallBetaing")
-				go fallBeta(grid, cells, tempCellArr, randomColor(), false, params, limit)
+				go fallBeta(grid, cells, tempCellArr, randomColor(), false, params, limit, scoreLabel)
 			}
 		}
 
@@ -185,7 +312,7 @@ func fallBeta(grid fyne.Container, cells [][]*canvas.Rectangle, groupCells []fyn
 						// Check for filled rows
 						// fmt.Println("a")
 						if rowCounters[maxY] >= gridWidth-squaresInRows[maxY] {
-							increaseScore(1)
+							increaseScore(1, scoreLabel)
 							// fmt.Printf("Row %d is full\n", maxY)
 							// Clear or update the filled row
 							go func() {
