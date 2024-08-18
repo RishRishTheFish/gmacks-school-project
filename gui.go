@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
 
 	//	chess "onslow.collage/chess"
@@ -105,8 +104,8 @@ func setPosAndSize(top, bottom, left, right, centerRect fyne.CanvasObject, textb
 	// ))
 
 	// Debug: Output the position and size of centerRect
-	fmt.Printf("centerRect Position: %v\n", centerRect.Position())
-	fmt.Printf("centerRect Size: %v\n", centerRect.Size())
+	//fmt.Printf("centerRect Position: %v\n", centerRect.Position())
+	//fmt.Printf("centerRect Size: %v\n", centerRect.Size())
 
 	// Handle options pop-up
 	if showOptions {
@@ -202,12 +201,15 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	}), container.NewMax(buttonColor, returnText("tetris-beta")))
 	toggleButton5 := container.NewMax(widget.NewButton("", func() {
 		options.Hide()
-		w.SetContent(createTetris(w, false))
+		w.SetContent(createSnake(w))
+		// options.Hide()
+		// w.SetContent(createTetris(w, false))
 	}), container.NewMax(buttonColor, returnText("snake")))
 	toggleButton6 := container.NewMax(widget.NewButton("", func() {
+		// options.Hide()
+		// w.SetContent(createSnake(w))
 		options.Hide()
-		w.SetContent(createSnake(w))
-
+		w.SetContent(createTetris(w, false))
 	}), container.NewMax(buttonColor, returnText("tetris-latest")))
 	toggleButton1 := container.NewMax(widget.NewButton("", func() {
 		if right.Visible() {
