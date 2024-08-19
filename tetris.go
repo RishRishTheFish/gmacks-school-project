@@ -2,7 +2,6 @@ package main
 
 import (
 	"image/color"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -121,27 +120,28 @@ func createTetris(w fyne.Window, customTheme *CustomTheme, isBeta bool) *fyne.Co
 		index := (pieceY+1)*gridWidth + pieceX
 		return lockedCells[index] == nil
 	}
-	actions := map[string]func(x float32) []fyne.Position{
-		"square": makeSquare,
-		"line":   makeLine,
-		// "corner": makeCorner, // Uncomment if makeCorner is available
-	}
-	actionNames := make([]string, 0, len(actions))
-	for name := range actions {
+	// actions := map[string]func(x float32) []fyne.Position{
+	// 	"square": makeSquare,
+	// 	"line":   makeLine,
+	// 	// "corner": makeCorner, // Uncomment if makeCorner is available
+	// }
+	// actionNames := make([]string, 0, len(actions))
+	// for name := range actions {
 
-		actionNames = append(actionNames, name)
-	}
-	randomIndex := rand.Intn(max(1, len(actionNames)))
-	selectedActionName := actionNames[randomIndex]
+	// 	actionNames = append(actionNames, name)
+	// }
+	// randomIndex := rand.Intn(max(1, len(actionNames)))
+	// selectedActionName := actionNames[randomIndex]
 
 	renderPiece := func() {
-		for _, cell := range actions[selectedActionName](float32(pieceX)) {
-			// Calculate the index based on the x and y positions of the piece
-			index := int(cell.Y)*gridWidth + int(cell.X)
+		// for _, cell := range actions[selectedActionName](float32(pieceX)) {
+		// Calculate the index based on the x and y positions of the piece
+		// index := int(cell.Y)*gridWidth + int(cell.X)
+		index := pieceY*gridWidth + pieceX
 
-			// Update the buffered grid with the desired color
-			bufferedGrid[index] = color.NRGBA{255, 0, 0, 255}
-		}
+		// Update the buffered grid with the desired color
+		bufferedGrid[index] = color.NRGBA{255, 0, 0, 255}
+		//}
 	}
 
 	deleteRow := func(y int) {

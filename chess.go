@@ -8,7 +8,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 
 	//"fyne.io/fyne/v2/internal/widget"
 	"github.com/notnil/chess"
@@ -60,6 +59,8 @@ func createGrid(g *chess.Game) *fyne.Container {
 
 	return grid
 }
+
+var gameEnded bool
 
 // func prepareToMove(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
 
@@ -144,9 +145,7 @@ func createGrid(g *chess.Game) *fyne.Container {
 // }
 
 func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
-	// m := mirrorSquare(b.S1())
-	//flipGrid(grid, game.Position().Board())
-	off := squareToOffset(mirrorSquare(m.S1()))
+	off := squareToOffset(m.S1())
 
 	// Attempt to get the cell, even if there might be issues
 	var cell *fyne.Container
@@ -177,7 +176,7 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 	img.Resource = nil
 	img.Refresh()
 
-	off = squareToOffset(mirrorSquare(m.S2()))
+	off = squareToOffset(m.S2())
 	if off < 0 || off >= len(grid.Objects) {
 		fmt.Println("Warning: Offset is out of bounds for target square")
 		return
@@ -193,8 +192,7 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 	time.Sleep(time.Millisecond * 550)
 
 	game.Move(m)
-	flipGrid(grid, game.Position().Board())
-	//refreshGrid(grid, game.Position().Board())
+	refreshGrid(grid, game.Position().Board())
 	over.Hide()
 
 	if game.Outcome() != chess.NoOutcome {
@@ -205,10 +203,79 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 		case "0-1":
 			result = "lost"
 		}
-		dialog.ShowInformation("Game ended",
-			"Game "+result+" because "+game.Method().String(), win)
+		showCustomModalPopup(win, "Game ended", "Game "+result+" because "+game.Method().String())
+		gameEnded = true
+		// dialog.ShowInformation("Game ended",
+		// 	"Game "+result+" because "+game.Method().String(), win)
 	}
 }
+
+// func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
+// 	// m := mirrorSquare(b.S1())
+// 	//flipGrid(grid, game.Position().Board())
+// 	off := squareToOffset(mirrorSquare(m.S1()))
+
+// 	// Attempt to get the cell, even if there might be issues
+// 	var cell *fyne.Container
+// 	if grid == nil {
+// 		fmt.Println("Warning: Grid is nil, cannot get cell")
+// 		return
+// 	}
+// 	if grid.Objects == nil {
+// 		fmt.Println("Warning: Grid objects are nil, cannot get cell")
+// 		return
+// 	}
+// 	if off < 0 || off >= len(grid.Objects) {
+// 		fmt.Println("Warning: Offset is out of bounds, cannot get cell")
+// 		return
+// 	}
+
+// 	// If all checks pass, proceed to get the cell
+// 	cell = grid.Objects[off].(*fyne.Container)
+// 	img := cell.Objects[1].(*peice)
+// 	pos1 := cell.Position()
+
+// 	over.Resource = img.Resource
+// 	over.Move(pos1)
+// 	over.Resize(img.Size())
+// 	over.Refresh() // clear old resource before showing
+
+// 	over.Show()
+// 	img.Resource = nil
+// 	img.Refresh()
+
+// 	off = squareToOffset(mirrorSquare(m.S2()))
+// 	if off < 0 || off >= len(grid.Objects) {
+// 		fmt.Println("Warning: Offset is out of bounds for target square")
+// 		return
+// 	}
+// 	cell = grid.Objects[off].(*fyne.Container)
+// 	pos2 := cell.Position()
+
+// 	a := canvas.NewPositionAnimation(pos1, pos2, time.Millisecond*500, func(p fyne.Position) {
+// 		over.Move(p)
+// 		over.Refresh()
+// 	})
+// 	a.Start()
+// 	time.Sleep(time.Millisecond * 550)
+
+// 	game.Move(m)
+// 	flipGrid(grid, game.Position().Board())
+// 	//refreshGrid(grid, game.Position().Board())
+// 	over.Hide()
+
+// 	if game.Outcome() != chess.NoOutcome {
+// 		result := "draw"
+// 		switch game.Outcome().String() {
+// 		case "1-0":
+// 			result = "won"
+// 		case "0-1":
+// 			result = "lost"
+// 		}
+// 		dialog.ShowInformation("Game ended",
+// 			"Game "+result+" because "+game.Method().String(), win)
+// 	}
+// }
 
 func createChess(w fyne.Window, customTheme *CustomTheme) {
 	game := chess.NewGame()

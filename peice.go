@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math/rand"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -92,15 +93,12 @@ func newPeice(g *chess.Game, square chess.Square, grid *fyne.Container) *peice {
 //		dialog.ShowInformation("Invalid move", "Cannot move piece "+pos.String()+" to square "+p.square.String(), win)
 //	}
 func showCustomModalPopup(w fyne.Window, title, message string) {
-	// Define the blue background
 	bgColor := color.RGBA{R: 0x00, G: 0x00, B: 0xFF, A: 0xFF} // Blue
 
-	// Set the size of the popup
 	popupSize := fyne.NewSize(400, 150)
 
-	// Create the background rectangle
 	bg := canvas.NewRectangle(bgColor)
-	bg.Resize(popupSize) // Resize the background to match the popup size
+	bg.Resize(popupSize)
 
 	// Create a label for the message
 	msgLabel := canvas.NewText(message, color.White)
@@ -155,13 +153,10 @@ func mirrorSquare(square chess.Square) chess.Square {
 func (p *peice) Tapped(ev *fyne.PointEvent) {
 	w := p.window
 	g := p.container
-
-	// Check if a move is in progress
+	// fmt.Println(g)
 	if moveStart == chess.NoSquare {
-		// Check if the move is valid from the current square
 		if m := isValidMove(p.square, chess.NoSquare, p.game); m != nil {
 			moveStart = p.square
-			//flipGrid(p.container, p.game.Position().Board())
 		} else {
 			showCustomModalPopup(w, "Invalid move", fmt.Sprintf("Cannot move piece %d",
 				p.game.Position().Board().Piece(p.square)))
@@ -169,42 +164,78 @@ func (p *peice) Tapped(ev *fyne.PointEvent) {
 		return
 	}
 
-	// Check if the move from `moveStart` to the current square is valid
 	if m := isValidMove(moveStart, p.square, p.game); m != nil {
-		// Perform the original move
-		//flipGrid(p.container, p.game.Position().Board())
-		// flipGrid()
-		move(m, p.game, g, over)
-		//	flipGrid(p.container, p.game.Position().Board())
-		// Now mirror the move to the opposite side of the board
-		// mirroredStart := mirrorSquare(moveStart)
-		// mirroredEnd := mirrorSquare(p.square)
-
-		// fmt.Printf("Original Move: %v -> %v\n", moveStart, p.square)
-		// fmt.Printf("Mirrored Move: %v -> %v\n", mirroredStart, mirroredEnd)
-
-		// // Check if the mirrored move is valid
-		// if mirroredMove := isValidMove(mirroredStart, mirroredEnd, p.game); mirroredMove != nil {
-		// 	// Perform the mirrored move
-		// 	move(mirroredMove, p.game, g, over)
-		// }
-
-		// Reset the move start
 		moveStart = chess.NoSquare
+		move(m, p.game, g, over)
 
-		// Optionally flip the grid (if needed)
-		// flipGrid(p.container, p.game.Position().Board())
-
+		go func() {
+			time.Sleep(time.Second)
+			// fmt.Println("a")
+			if !gameEnded {
+				randomResponse(p.game, g)
+			}
+		}()
 		return
 	}
-
-	// If the move is invalid, show an error message
 	showCustomModalPopup(w, "Invalid move", fmt.Sprintf("Cannot move piece %d to square %v",
 		p.game.Position().Board().Piece(moveStart), p.square))
 
-	// Reset the move start
 	moveStart = chess.NoSquare
 }
+
+// func (p *peice) Tapped(ev *fyne.PointEvent) {
+// 	w := p.window
+// 	g := p.container
+
+// 	// Check if a move is in progress
+// 	if moveStart == chess.NoSquare {
+// 		// Check if the move is valid from the current square
+// 		if m := isValidMove(p.square, chess.NoSquare, p.game); m != nil {
+// 			moveStart = p.square
+// 			//flipGrid(p.container, p.game.Position().Board())
+// 		} else {
+// 			showCustomModalPopup(w, "Invalid move", fmt.Sprintf("Cannot move piece %d",
+// 				p.game.Position().Board().Piece(p.square)))
+// 		}
+// 		return
+// 	}
+
+// 	// Check if the move from `moveStart` to the current square is valid
+// 	if m := isValidMove(moveStart, p.square, p.game); m != nil {
+// 		// Perform the original move
+// 		//flipGrid(p.container, p.game.Position().Board())
+// 		// flipGrid()
+// 		move(m, p.game, g, over)
+// 		//	flipGrid(p.container, p.game.Position().Board())
+// 		// Now mirror the move to the opposite side of the board
+// 		// mirroredStart := mirrorSquare(moveStart)
+// 		// mirroredEnd := mirrorSquare(p.square)
+
+// 		// fmt.Printf("Original Move: %v -> %v\n", moveStart, p.square)
+// 		// fmt.Printf("Mirrored Move: %v -> %v\n", mirroredStart, mirroredEnd)
+
+// 		// // Check if the mirrored move is valid
+// 		// if mirroredMove := isValidMove(mirroredStart, mirroredEnd, p.game); mirroredMove != nil {
+// 		// 	// Perform the mirrored move
+// 		// 	move(mirroredMove, p.game, g, over)
+// 		// }
+
+// 		// Reset the move start
+// 		moveStart = chess.NoSquare
+
+// 		// Optionally flip the grid (if needed)
+// 		// flipGrid(p.container, p.game.Position().Board())
+
+// 		return
+// 	}
+
+// 	// If the move is invalid, show an error message
+// 	showCustomModalPopup(w, "Invalid move", fmt.Sprintf("Cannot move piece %d to square %v",
+// 		p.game.Position().Board().Piece(moveStart), p.square))
+
+// 	// Reset the move start
+// 	moveStart = chess.NoSquare
+// }
 
 // func (p *peice) Tapped(ev *fyne.PointEvent) {
 // 	w := p.window
