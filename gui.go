@@ -188,10 +188,7 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	commandRect.SetMinSize(fyne.NewSize(centerRect.MinSize().Width, 50))
 	// Create the entry widget
 	entry := widget.NewEntry()
-	entry.OnSubmitted = func(content string) {
-		// fmt.Println("Submitted content:", content)
-		// Perform any additional actions with the submitted content
-	}
+
 	// Define a function to handle the Enter key press
 	// handleEnterKey := func(ev *fyne.KeyEvent) {
 	// 	if ev.Name == fyne.KeyEnter {
@@ -209,30 +206,30 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	// })
 
 	center := container.NewMax(centerRect, container.NewVBox(
-		container.NewHBox(
-			layout.NewSpacer(),
-			container.NewMax(
-				&scoreBoardRect,
-				container.NewVBox(
-					widget.NewLabel("test"),
-				),
-			),
-			layout.NewSpacer(),
-			container.NewMax(
-				&scoreBoardRect,
-				container.NewVBox(
-					widget.NewLabel("test"),
-				),
-			),
-			layout.NewSpacer(),
-			container.NewMax(
-				&scoreBoardRect,
-				container.NewVBox(
-					widget.NewLabel("test"),
-				),
-			),
-			layout.NewSpacer(),
-		),
+		// container.NewHBox(
+		// 	layout.NewSpacer(),
+		// 	container.NewMax(
+		// 		&scoreBoardRect,
+		// 		container.NewVBox(
+		// 			widget.NewLabel("test"),
+		// 		),
+		// 	),
+		// 	layout.NewSpacer(),
+		// 	container.NewMax(
+		// 		&scoreBoardRect,
+		// 		container.NewVBox(
+		// 			widget.NewLabel("test"),
+		// 		),
+		// 	),
+		// 	layout.NewSpacer(),
+		// 	container.NewMax(
+		// 		&scoreBoardRect,
+		// 		container.NewVBox(
+		// 			widget.NewLabel("test"),
+		// 		),
+		// 	),
+		// 	layout.NewSpacer(),
+		// ),
 		layout.NewSpacer(),
 		container.NewMax(&commandRect, container.NewVBox(
 			widget.NewLabel("Type a message here!"),
@@ -248,10 +245,20 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	// 	layout.NewSpacer(),
 	// ),
 	)
+
 	// overlay := container.NewStac
 	// Make sure the rectangle expands to fill the available space
 	centerRect.Resize(fyne.NewSize(800, 600)) // Adjust this size as needed, or leave it to auto-resize
+	entry.OnSubmitted = func(content string) {
+		// Create a new label with the submitted content
+		newMessage := widget.NewLabel(content)
 
+		// Add the new label to the VBox in the center container
+		center.Objects[1].(*fyne.Container).Add(newMessage)
+
+		// Optionally clear the entry after submission
+		entry.SetText("")
+	}
 	// Create buttons
 	var options *widget.PopUp
 	var root *fyne.Container
