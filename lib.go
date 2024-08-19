@@ -27,16 +27,6 @@ func colorToRGBA(c color.Color) color.RGBA {
 	}
 }
 
-// type CustomTheme struct {
-// 	backgroundColor color.Color
-// 	sideBarColor    color.Color
-// 	topColor        color.Color
-// 	contentColor    color.Color
-// 	themeLabelColor color.Color
-// }
-
-// NewCustomTheme creates a new CustomTheme with the specified background color
-// If the background color is nil, it defaults to black
 type CustomTheme struct {
 	backgroundColor color.Color
 	sideBarColor    color.Color
@@ -71,16 +61,16 @@ func NewCustomTheme(
 		content = color.Gray{Y: 0x80}
 	}
 	if themeLabel == nil {
-		themeLabel = color.Gray{Y: 0x88} // Example default gray color
+		themeLabel = color.Gray{Y: 0x88}
 	}
 	if options == nil {
-		options = color.Gray{Y: 0x80} // Example default gray color
+		options = color.Gray{Y: 0x80}
 	}
 	if button == nil {
-		button = color.Gray{Y: 0x80} // Example default gray color
+		button = color.Gray{Y: 0x80}
 	}
 	if foreground == nil {
-		foreground = color.White // Example default foreground color
+		foreground = color.White
 	}
 
 	return &CustomTheme{
@@ -97,35 +87,17 @@ func NewCustomTheme(
 
 func (c *CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
 	return c.backgroundColor
-	// switch name {
-	// case ColorNameBackground:
-	// 	return c.backgroundColor
-	// case ColorNameButton:
-	// 	return c.contentColor
-	// case ColorNameText:
-	// 	return c.themeLabelColor
-	// case ColorNameSidebar:
-	// 	return c.sideBarColor
-	// case ColorNameTop:
-	// 	return c.topColor
-	// case ColorNameContent:
-	// 	return c.contentColor
-	// default:
-	// 	return c.foregroundColor
-	// }
+
 }
 
-// Font returns the font for a specific element of the theme
 func (c *CustomTheme) Font(style fyne.TextStyle) fyne.Resource {
 	return theme.DefaultTheme().Font(style)
 }
 
-// Icon returns the icon for a specific element of the theme
 func (c *CustomTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
 	return theme.DefaultTheme().Icon(name)
 }
 
-// Size returns the size for a specific element of the theme
 func (c *CustomTheme) Size(name fyne.ThemeSizeName) float32 {
 	return theme.DefaultTheme().Size(name)
 }

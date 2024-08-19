@@ -114,7 +114,12 @@ func createTetris(w fyne.Window, customTheme *CustomTheme, isBeta bool) *fyne.Co
 	lockedCells := make([]*color.NRGBA, gridWidth*gridHeight)
 
 	canFall := func() bool {
+		// fmt.Println(pieceY)
+		// if pieceY < 2 {
+		// 	fmt.Println("Ended")
+		// }
 		if pieceY == gridHeight-1 {
+			// fmt.Println("Ended")
 			return false
 		}
 		index := (pieceY+1)*gridWidth + pieceX
@@ -143,7 +148,7 @@ func createTetris(w fyne.Window, customTheme *CustomTheme, isBeta bool) *fyne.Co
 		bufferedGrid[index] = color.NRGBA{255, 0, 0, 255}
 		//}
 	}
-
+	// tetrisScores
 	deleteRow := func(y int) {
 		for x := 0; x < gridWidth; x++ {
 			lockedCells[y*gridWidth+x] = nil

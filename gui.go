@@ -15,6 +15,10 @@ import (
 	// "./chess"
 )
 
+var tetrisScores []int
+var chessScores []int
+var snakeScores []int
+
 func makeBanner(color color.Color) fyne.CanvasObject {
 	toolbar := widget.NewToolbar(
 		widget.NewToolbarAction(theme.HomeIcon(), func() {}),
@@ -231,7 +235,7 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		),
 		layout.NewSpacer(),
 		container.NewMax(&commandRect, container.NewVBox(
-			widget.NewLabel("command, rect"),
+			widget.NewLabel("Type a message here!"),
 			entry,
 		)),
 	),
@@ -289,15 +293,31 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		container.NewCenter(cantRunVbox)),
 		w.Canvas(),
 	)
+	var chessMode *widget.PopUp
+	toggleButton8 := container.NewMax(widget.NewButton("", func() {
+		options.Hide()
+		chessMode.Hide()
+		createChess(w, true, CustomTheme)
+	}), container.NewMax(buttonColor, returnText("chess with pve")))
+	chessMode = widget.NewModalPopUp(
+		container.NewMax(
+			optionsColor,
+			container.NewVBox(
+				toggleButton8,
+			),
+		),
+		w.Canvas(),
+	)
 	toggleButton2 := container.NewMax(widget.NewButton("", func() {
 		enableOptions = true
 		resizeAndRefresh(top, bottom, left, right, center, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
 	}), container.NewMax(buttonColor, returnText("show options")))
-
 	toggleButton3 := container.NewMax(widget.NewButton("", func() {
 		options.Hide()
-		createChess(w, CustomTheme)
+		chessMode.Show()
+		// createChess(w, true, CustomTheme)
 	}), container.NewMax(buttonColor, returnText("chess")))
+
 	toggleButton4 := container.NewMax(widget.NewButton("", func() {
 		if allowBeta {
 			options.Hide()
@@ -336,7 +356,9 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		toggleButton3: 40,
 		toggleButton5: 80,
 		toggleButton6: 120,
-		toggleButton4: 180, // Starting position of toggleButton4
+		toggleButton4: 160,
+		toggleButton7: 220, // Starting position of toggleButton4
+
 	}
 
 	// Apply initial positions to buttons
@@ -357,9 +379,9 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		toggleButton3,
 		toggleButton5,
 		toggleButton6,
-		toggleButton7,
-		spacer, // Add spacer to start with
 		toggleButton4,
+		spacer, // Add spacer to start with
+		toggleButton7,
 	))
 
 	slider.OnChanged = func(value float64) {
@@ -368,7 +390,7 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		}
 
 		for btn, initialY := range initialPositions {
-			if btn != toggleButton4 {
+			if btn != toggleButton7 {
 				newY := initialY - float32(value)
 				btn.Move(fyne.NewPos(0, newY))
 			}
@@ -377,9 +399,9 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		if value >= 100 {
 
 			newY := originalPosY - (float32(value) - 50)
-			toggleButton4.Move(fyne.NewPos(0, newY))
+			toggleButton7.Move(fyne.NewPos(0, newY))
 		} else {
-			toggleButton4.Move(fyne.NewPos(0, originalPosY))
+			toggleButton7.Move(fyne.NewPos(0, originalPosY))
 		}
 	}
 

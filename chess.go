@@ -35,7 +35,32 @@ var (
 //		}
 //		return container.New(&boardLayout{}, cells...)
 //	}
-func createGrid(g *chess.Game) *fyne.Container {
+func createFlippedGrid(g *chess.Game, theme *CustomTheme) *fyne.Container {
+	var cells []fyne.CanvasObject
+
+	// Create a placeholder for the grid pointer
+	grid := new(fyne.Container)
+
+	for y := 0; y < 8; y++ {
+		for x := 7; x >= 0; x-- {
+			bg := canvas.NewRectangle(color.NRGBA{0xF4, 0xE2, 0xB6, 0xFF})
+			if x%2 == y%2 {
+				bg.FillColor = color.RGBA{0x73, 0x50, 0x32, 0xFF}
+			}
+
+			// Create the piece and pass the grid pointer to it
+			p := newPeice(g, chess.Square(x+y*8), grid, false, theme)
+			cells = append(cells, container.NewMax(bg, p))
+		}
+	}
+
+	// Now that the grid is fully constructed, reassign grid
+	*grid = *container.New(&boardLayout{}, cells...)
+
+	return grid
+}
+
+func createGrid(g *chess.Game, theme *CustomTheme, pve bool) *fyne.Container {
 	var cells []fyne.CanvasObject
 
 	// Create a placeholder for the grid pointer
@@ -49,7 +74,7 @@ func createGrid(g *chess.Game) *fyne.Container {
 			}
 
 			// Create the piece and pass the grid pointer to it
-			p := newPeice(g, chess.Square(x+y*8), grid)
+			p := newPeice(g, chess.Square(x+y*8), grid, pve, theme)
 			cells = append(cells, container.NewMax(bg, p))
 		}
 	}
@@ -144,7 +169,7 @@ var gameEnded bool
 // 	}
 // }
 
-func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
+func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image, p *peice) {
 	off := squareToOffset(m.S1())
 
 	// Attempt to get the cell, even if there might be issues
@@ -203,11 +228,30 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 		case "0-1":
 			result = "lost"
 		}
-		showCustomModalPopup(win, "Game ended", "Game "+result+" because "+game.Method().String())
+		showCustomModalPopup(win, "Game ended", "Game "+result+" because "+game.Method().String()+", returning you to the menu in a few seconds!")
 		gameEnded = true
+		time.Sleep(time.Second)
+		returnToMenu(p.window, p.theme)
 		// dialog.ShowInformation("Game ended",
 		// 	"Game "+result+" because "+game.Method().String(), win)
 	}
+}
+
+// Function to prompt the user with options after the game ends
+//
+//	func promptGameEnd(win fyne.Window, game *chess.Game, grid *fyne.Container) {
+//		dialog.ShowConfirm("Game Over", "Would you like to restart the game or return to the main menu?", func(restart bool) {
+//			if restart {
+//				restartGame(game, grid)
+//			} else {
+//				returnToMenu(win)
+//			}
+//		}, win)
+//	}
+func restartGame(game *chess.Game, grid *fyne.Container) {
+	game = chess.NewGame()                     // Reset the game
+	refreshGrid(grid, game.Position().Board()) // Refresh the grid with the new game state
+	gameEnded = false                          // Reset the game ended flag
 }
 
 // func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
@@ -277,13 +321,13 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 // 	}
 // }
 
-func createChess(w fyne.Window, customTheme *CustomTheme) {
+func createChess(w fyne.Window, pve bool, customTheme *CustomTheme) {
 	game := chess.NewGame()
 	win = w // Assign the window to the global variable
 
 	win.Resize(fyne.NewSize(480, 480))
 
-	grid := createGrid(game)
+	grid := createGrid(game, customTheme, pve)
 	over = canvas.NewImageFromResource(nil)
 	over.Hide()
 
