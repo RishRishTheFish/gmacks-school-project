@@ -198,8 +198,7 @@ func (g *SnakeGame) GetGrid() *fyne.Container {
 	}
 	return grid
 }
-
-func createSnake(w fyne.Window) fyne.CanvasObject {
+func createSnake(w fyne.Window, customTheme *CustomTheme) fyne.CanvasObject {
 	// Define colors
 	backgroundColor := color.RGBA{0x10, 0x10, 0x10, 0xff} // Dark background
 	textColor := color.RGBA{0xcc, 0xcc, 0xcc, 0xff}       // Light gray for text
@@ -228,42 +227,41 @@ func createSnake(w fyne.Window) fyne.CanvasObject {
 	footerLabel.TextStyle = fyne.TextStyle{Bold: true}
 	footerLabel.Alignment = fyne.TextAlignCenter
 
-	// Create header and footer containers
-	header := container.NewHBox(
+	// Create a header and footer for the game
+	header := container.NewVBox(
 		layout.NewSpacer(),
 		scoreLabel,
 		layout.NewSpacer(),
 	)
 
-	footer := container.NewHBox(
+	footer := container.NewVBox(
 		layout.NewSpacer(),
 		footerLabel,
 		layout.NewSpacer(),
 	)
 
-	// Create a centered container with padding
-	gridWrapper := container.NewVBox(
+	// Create a container for the grid
+	gridContainer := container.NewVBox(
 		layout.NewSpacer(),
-		container.NewHBox(
-			layout.NewSpacer(),
-			grid,
-			layout.NewSpacer(),
-		),
+		grid,
 		layout.NewSpacer(),
 	)
 
-	// Create a container for the game
+	// Create the main game container with a background
 	gameContainer := container.NewVBox(
 		header,
-		gridWrapper,
+		gridContainer,
 		footer,
 	)
 
 	// Overlay the game UI on top of the background
 	content := container.NewMax(background, gameContainer)
 
+	// Add a sidebar using container.NewBorder
+	contentWithSidebar := container.NewBorder(nil, nil, nil, container.NewHBox(getFiller(), getSidebar(w, customTheme)), content)
+
 	// Set the content for the window
-	w.SetContent(content)
+	w.SetContent(contentWithSidebar)
 
 	// Key event handling
 	w.Canvas().SetOnTypedKey(func(k *fyne.KeyEvent) {
@@ -277,16 +275,13 @@ func createSnake(w fyne.Window) fyne.CanvasObject {
 		case fyne.KeyRight:
 			game.changeDirection(fyne.Position{X: 1, Y: 0})
 		case fyne.KeySpace:
-			// game.reset()
-			w.SetContent(createSnake(w))
-			// if game.gameOver {
-			// 	game.reset()
-			// }
+			w.SetContent(createSnake(w, customTheme))
 		}
 	})
 
-	return content
+	return contentWithSidebar
 }
+
 func (g *SnakeGame) changeDirection(newDirection fyne.Position) {
 	if (newDirection.X == -g.direction.X && newDirection.Y == 0) || (newDirection.Y == -g.direction.Y && newDirection.X == 0) {
 		// Prevent reversing direction

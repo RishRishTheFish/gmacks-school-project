@@ -9,6 +9,8 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+
+	//"fyne.io/fyne/v2/internal/widget"
 	"github.com/notnil/chess"
 )
 
@@ -62,9 +64,89 @@ func createGrid(g *chess.Game) *fyne.Container {
 // func prepareToMove(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
 
 // }
+// func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
+// 	// Mirror the start and end squares
+// 	mirroredStart := mirrorSquare(m.S1())
+// 	mirroredEnd := mirrorSquare(m.S2())
+
+// 	// Safeguard checks
+// 	off := squareToOffset(mirroredStart)
+// 	var cell *fyne.Container
+
+// 	if grid == nil {
+// 		fmt.Println("Warning: Grid is nil, cannot get cell")
+// 		return
+// 	}
+// 	if grid.Objects == nil {
+// 		fmt.Println("Warning: Grid objects are nil, cannot get cell")
+// 		return
+// 	}
+// 	if off < 0 || off >= len(grid.Objects) {
+// 		fmt.Println("Warning: Offset is out of bounds, cannot get cell")
+// 		return
+// 	}
+
+// 	// If all checks pass, proceed to get the cell
+// 	cell = grid.Objects[off].(*fyne.Container)
+// 	img := cell.Objects[1].(*peice)
+// 	pos1 := cell.Position()
+
+// 	// Handle overlay
+// 	over.Resource = img.Resource
+// 	over.Move(pos1)
+// 	over.Resize(img.Size())
+// 	over.Refresh() // clear old resource before showing
+
+// 	over.Show()
+// 	img.Resource = nil
+// 	img.Refresh()
+
+// 	// Move to the destination cell
+// 	off = squareToOffset(mirroredEnd)
+// 	if off < 0 || off >= len(grid.Objects) {
+// 		fmt.Println("Warning: Offset is out of bounds for target square")
+// 		return
+// 	}
+// 	cell = grid.Objects[off].(*fyne.Container)
+// 	pos2 := cell.Position()
+
+// 	// Animate the move
+// 	a := canvas.NewPositionAnimation(pos1, pos2, time.Millisecond*500, func(p fyne.Position) {
+// 		over.Move(p)
+// 		over.Refresh()
+// 	})
+// 	a.Start()
+// 	time.Sleep(time.Millisecond * 550)
+
+// 	// Perform the mirrored move on the game board
+// 	mirroredMove := chess.Move{
+// 		// Assuming Move has methods to create or set moves
+// 		// You may need to use appropriate methods to apply mirrored move
+// 		S1: mirroredStart,
+// 		S2: mirroredEnd,
+// 	}
+// 	game.Move(&mirroredMove)
+// 	refreshGrid(grid, game.Position().Board())
+// 	over.Hide()
+
+// 	// Check for game outcome
+// 	if game.Outcome() != chess.NoOutcome {
+// 		result := "draw"
+// 		switch game.Outcome().String() {
+// 		case "1-0":
+// 			result = "won"
+// 		case "0-1":
+// 			result = "lost"
+// 		}
+// 		dialog.ShowInformation("Game ended",
+// 			"Game "+result+" because "+game.Method().String(), win)
+// 	}
+// }
 
 func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
-	off := squareToOffset(m.S1())
+	// m := mirrorSquare(b.S1())
+	//flipGrid(grid, game.Position().Board())
+	off := squareToOffset(mirrorSquare(m.S1()))
 
 	// Attempt to get the cell, even if there might be issues
 	var cell *fyne.Container
@@ -95,7 +177,7 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 	img.Resource = nil
 	img.Refresh()
 
-	off = squareToOffset(m.S2())
+	off = squareToOffset(mirrorSquare(m.S2()))
 	if off < 0 || off >= len(grid.Objects) {
 		fmt.Println("Warning: Offset is out of bounds for target square")
 		return
@@ -111,7 +193,8 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 	time.Sleep(time.Millisecond * 550)
 
 	game.Move(m)
-	refreshGrid(grid, game.Position().Board())
+	flipGrid(grid, game.Position().Board())
+	//refreshGrid(grid, game.Position().Board())
 	over.Hide()
 
 	if game.Outcome() != chess.NoOutcome {
@@ -126,6 +209,135 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 			"Game "+result+" because "+game.Method().String(), win)
 	}
 }
+
+func createChess(w fyne.Window, customTheme *CustomTheme) {
+	game := chess.NewGame()
+	win = w // Assign the window to the global variable
+
+	win.Resize(fyne.NewSize(480, 480))
+
+	grid := createGrid(game)
+	over = canvas.NewImageFromResource(nil)
+	over.Hide()
+
+	// Create a container with the chess widgets and place it in a specific area
+	chessWidgets := getSidebar(w, customTheme)
+
+	content := container.NewBorder(
+		nil,          // No top content
+		nil,          // No bottom content
+		nil,          // No left content
+		chessWidgets, // No right content
+		container.NewMax(grid, container.NewWithoutLayout(over)), // Main content (center)
+		// Additional content (could be placed in top, bottom, left, or right
+	)
+
+	win.SetContent(content)
+	refreshGrid(grid, game.Position().Board())
+}
+
+func refreshGrid(grid *fyne.Container, b *chess.Board) {
+	y, x := 7, 0
+	for _, cell := range grid.Objects {
+		p := b.Piece(chess.Square(x + y*8))
+
+		img := cell.(*fyne.Container).Objects[1].(*peice)
+		img.Resource = resourceForPiece(p.Color(), p.Type())
+		img.Refresh()
+
+		x++
+		if x == 8 {
+			x = 0
+			y--
+		}
+	}
+}
+func flipGrid(grid *fyne.Container, b *chess.Board) {
+	// Retrieve the objects in the grid
+	objects := grid.Objects
+
+	// Prepare a list to hold the pieces
+	pieces := make([]*peice, len(objects))
+
+	// Extract the piece widgets from the grid objects
+	for i, obj := range objects {
+		pieceContainer := obj.(*fyne.Container)
+		piece := pieceContainer.Objects[1].(*peice)
+		pieces[i] = piece
+	}
+
+	// Flip each row of the grid horizontally
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 4; x++ { // Only need to go halfway because we'll swap pairs
+			// Calculate the index for the current and opposite cells in the row
+			index1 := y*8 + x
+			index2 := y*8 + (7 - x)
+
+			// Swap the pieces at index1 and index2
+			piece1 := pieces[index1]
+			piece2 := pieces[index2]
+
+			// Swap the resources
+			p1 := b.Piece(chess.Square(index1))
+			p2 := b.Piece(chess.Square(index2))
+
+			piece1.Resource = resourceForPiece(p2.Color(), p2.Type())
+			piece2.Resource = resourceForPiece(p1.Color(), p1.Type())
+
+			piece1.Refresh()
+			piece2.Refresh()
+		}
+	}
+
+	// Optionally, refresh the grid container to reflect changes
+	grid.Refresh()
+}
+
+// func flipGrid(grid *fyne.Container, b *chess.Board) {
+// 	// Retrieve the objects in the grid
+// 	objects := grid.Objects
+
+// 	// Prepare a list to hold the pieces
+// 	pieces := make([]*peice, len(objects))
+
+// 	// Extract the piece widgets from the grid objects
+// 	for i, obj := range objects {
+// 		pieceContainer := obj.(*fyne.Container)
+// 		piece := pieceContainer.Objects[1].(*peice)
+// 		pieces[i] = piece
+// 	}
+
+// 	// Reverse the pieces along the vertical axis
+// 	y, x := 7, 0
+// 	for i := range pieces {
+// 		// Calculate the new index after flipping
+// 		newX := 7 - x
+// 		newY := y
+
+// 		// Update the piece's position and resource
+// 		//p := b.Piece(chess.Square(x + y*8))
+// 		newPiece := b.Piece(chess.Square(newX + newY*8))
+
+// 		pieces[i].Resource = resourceForPiece(newPiece.Color(), newPiece.Type())
+// 		pieces[i].Refresh()
+
+// 		// Update x and y for the next piece
+// 		x++
+// 		if x == 8 {
+// 			x = 0
+// 			y--
+// 		}
+// 	}
+
+// 	// Optionally, refresh the grid container to reflect changes
+// 	grid.Refresh()
+// }
+
+// returnToggleButton := container.NewMax(widget.NewButton("", func() {
+// 	enableOptions := false
+// 	resizeAndRefresh(top, bottom, left, right, center, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
+// }), container.NewMax(buttonColor, returnText("exit options")))
+// Use container.NewBorder to manage the layout more effectively
 
 // func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Image) {
 // 	off := squareToOffset(m.S1())
@@ -250,50 +462,20 @@ func move(m *chess.Move, game *chess.Game, grid *fyne.Container, over *canvas.Im
 
 // 	game.Move(m)
 
-// 	over.Hide()
-// 	refreshGrid(grid, game.Position().Board(), game)
-// }
+//		over.Hide()
+//		refreshGrid(grid, game.Position().Board(), game)
+//	}
 
-func createChess(w fyne.Window) {
-	game := chess.NewGame()
-	win = w // Assign the window to the global variable
-
-	win.Resize(fyne.NewSize(480, 480))
-
-	grid := createGrid(game)
-	over = canvas.NewImageFromResource(nil)
-	over.Hide()
-	win.SetContent(container.NewMax(grid, container.NewWithoutLayout(over)))
-	// valid := game.ValidMoves()
-	// m := valid[rand.Intn(len(valid))]
-	// move(m, game, grid, over)
-	refreshGrid(grid, game.Position().Board())
-	// go func() {
-	// 	rand.Seed(time.Now().UnixNano())
-	// 	for game.Outcome() == chess.NoOutcome {
-	// 		time.Sleep(500 * time.Millisecond)
-	// 		valid := game.ValidMoves()
-	// 		m := valid[rand.Intn(len(valid))]
-	// 		move(m, game, grid, over)
-	// 	}
-	// }()
-}
-func refreshGrid(grid *fyne.Container, b *chess.Board) {
-	y, x := 7, 0
-	for _, cell := range grid.Objects {
-		p := b.Piece(chess.Square(x + y*8))
-
-		img := cell.(*fyne.Container).Objects[1].(*peice)
-		img.Resource = resourceForPiece(p.Color(), p.Type())
-		img.Refresh()
-
-		x++
-		if x == 8 {
-			x = 0
-			y--
-		}
-	}
-}
+// Uncomment the following code if you need automated game moves
+// go func() {
+// 	rand.Seed(time.Now().UnixNano())
+// 	for game.Outcome() == chess.NoOutcome {
+// 		time.Sleep(500 * time.Millisecond)
+// 		valid := game.ValidMoves()
+// 		m := valid[rand.Intn(len(valid))]
+// 		move(m, game, grid, over)
+// 	}
+// }()
 
 // func refreshGrid(grid *fyne.Container, b *chess.Board, game *chess.Game) {
 // 	y, x := 7, 0

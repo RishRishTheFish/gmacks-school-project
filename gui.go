@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 
 	//	chess "onslow.collage/chess"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+
+	// "fyne.io/fyne/v2/key"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -123,9 +127,20 @@ func setPosAndSize(top, bottom, left, right, centerRect fyne.CanvasObject, textb
 	}
 }
 
+// func handleEnterKey(w fyne.Window, entry *widget.Entry, ev *fyne.KeyEvent) {
+// 	if ev.Name == fyne.KeyEnter {
+// 		// Get the text from the entry widget
+// 		text := entry.Text
+// 		fmt.Println("Text entered:", text)
+
+// 		// You can also show the text in a dialog or use it as needed
+// 		dialog.ShowInformation("Entered Text", text, w)
+// 	}
+// }
+
 // Function to resize and refresh the layout
-func resizeAndRefresh(top fyne.CanvasObject, bottom fyne.CanvasObject, left fyne.CanvasObject, right fyne.CanvasObject, centerRect *canvas.Rectangle, textbox *fyne.Container, content fyne.CanvasObject, dividers [3]fyne.CanvasObject, size fyne.Size, isVisible bool, enableOptions bool, options *widget.PopUp, root *fyne.Container) {
-	setPosAndSize(top, bottom, left, right, centerRect, textbox, content, dividers, size, isVisible, enableOptions, options)
+func resizeAndRefresh(top fyne.CanvasObject, bottom fyne.CanvasObject, left fyne.CanvasObject, right fyne.CanvasObject, center *fyne.Container, textbox *fyne.Container, content fyne.CanvasObject, dividers [3]fyne.CanvasObject, size fyne.Size, isVisible bool, enableOptions bool, options *widget.PopUp, root *fyne.Container) {
+	setPosAndSize(top, bottom, left, right, center, textbox, content, dividers, size, isVisible, enableOptions, options)
 	root.Refresh()
 }
 
@@ -142,10 +157,14 @@ func returnText(text string) *canvas.Text {
 	return finalText
 }
 
+var buttonColor *canvas.Rectangle
+
 func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	var enableOptions bool
+	allowBeta := false
 	//bgColor := color.RGBA{R: 0xFF, G: 0x69, B: 0xB4, A: 0xFF}
-	buttonColor := canvas.NewRectangle(colorToRGBA(CustomTheme.buttonColor))
+	buttonColor = canvas.NewRectangle(colorToRGBA(CustomTheme.buttonColor))
+	// globalButtonColor = globalButtonColor
 	// canvas.NewRectangle(&color.RGBA{R: 0xFF, G: 0x69, B: 0xB4, A: 0xFF})
 	//optionsColor := canvas.NewRectangle(bgColor)
 	optionsColor := canvas.NewRectangle(colorToRGBA(CustomTheme.optionsColor))
@@ -163,8 +182,75 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	bottom := widget.NewLabel("")
 	top := makeBanner(topColor)
 	// Create a rectangle that fills the entire center area
+	scoreBoardRect := *buttonColor
+	scoreBoardRect.FillColor = buttonColor.FillColor
+	scoreBoardRect.SetMinSize(fyne.NewSize(200, 300))
+
 	centerRect := canvas.NewRectangle(contentColor) // Green rectangle
 
+	commandRect := *buttonColor
+	commandRect.FillColor = buttonColor.FillColor
+	commandRect.SetMinSize(fyne.NewSize(centerRect.MinSize().Width, 50))
+	// Create the entry widget
+	entry := widget.NewEntry()
+
+	// Define a function to handle the Enter key press
+	handleEnterKey := func(ev *fyne.KeyEvent) {
+		if ev.Name == fyne.KeyEnter {
+			// Get the text from the entry widget
+			text := entry.Text
+			fmt.Println("Text entered:", text)
+
+			// You can also show the text in a dialog or use it as needed
+			dialog.ShowInformation("Entered Text", text, w)
+		}
+	}
+	w.Canvas().SetOnTypedKey(func(ev *fyne.KeyEvent) {
+		//handleEnterKey(w, entry, ev)
+		handleEnterKey(ev)
+	})
+
+	center := container.NewMax(centerRect, container.NewVBox(
+		container.NewHBox(
+			layout.NewSpacer(),
+			container.NewMax(
+				&scoreBoardRect,
+				container.NewVBox(
+					widget.NewLabel("test"),
+				),
+			),
+			layout.NewSpacer(),
+			container.NewMax(
+				&scoreBoardRect,
+				container.NewVBox(
+					widget.NewLabel("test"),
+				),
+			),
+			layout.NewSpacer(),
+			container.NewMax(
+				&scoreBoardRect,
+				container.NewVBox(
+					widget.NewLabel("test"),
+				),
+			),
+			layout.NewSpacer(),
+		),
+		layout.NewSpacer(),
+		container.NewMax(&commandRect, container.NewVBox(
+			widget.NewLabel("command, rect"),
+			entry,
+		)),
+	),
+	// layout.NewSpacer(),
+	// container.NewHBox(
+	// 	layout.NewSpacer(), // Center the command rectangle
+	// 	container.NewVBox(
+	// 		container.NewMax(&commandRect, widget.NewLabel("command, rect")),
+	// 	),
+	// 	layout.NewSpacer(),
+	// ),
+	)
+	// overlay := container.NewStac
 	// Make sure the rectangle expands to fill the available space
 	centerRect.Resize(fyne.NewSize(800, 600)) // Adjust this size as needed, or leave it to auto-resize
 
@@ -186,22 +272,49 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 
 	content := canvas.NewRectangle(contentColor)
 
+	cantRunBackroundSquare := canvas.NewRectangle(contentColor)
+	cantRunBackroundSquare.SetMinSize(fyne.NewSize(300, 150))
+	cantRunVboxBackround := *buttonColor
+	cantRunVboxBackround.SetMinSize(fyne.NewSize(250, 125))
+	var cantRun *widget.PopUp
+	cantRunVbox := container.NewMax(
+		&cantRunVboxBackround,
+		// container.NewFixedSize
+		// fyne.NewSize(300, 150),
+		container.NewVBox(
+			// widget.NewLabel("You cannot run this"),
+			container.NewMax(buttonColor, returnText("Sorry! beta functionality isnt avalible at the moment")),
+
+			container.NewMax(widget.NewButton("", func() {
+				cantRun.Hide()
+			}), container.NewMax(buttonColor, returnText("Click here to exit"))),
+		))
+
+	cantRun = widget.NewModalPopUp(container.NewMax(
+		cantRunBackroundSquare,
+		container.NewCenter(cantRunVbox)),
+		w.Canvas(),
+	)
 	toggleButton2 := container.NewMax(widget.NewButton("", func() {
 		enableOptions = true
-		resizeAndRefresh(top, bottom, left, right, centerRect, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
+		resizeAndRefresh(top, bottom, left, right, center, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
 	}), container.NewMax(buttonColor, returnText("show options")))
 
 	toggleButton3 := container.NewMax(widget.NewButton("", func() {
 		options.Hide()
-		createChess(w)
+		createChess(w, CustomTheme)
 	}), container.NewMax(buttonColor, returnText("chess")))
 	toggleButton4 := container.NewMax(widget.NewButton("", func() {
-		options.Hide()
-		w.SetContent(createTetris(w, true))
+		if allowBeta {
+			options.Hide()
+			w.SetContent(createTetris(w, CustomTheme, true))
+		} else {
+			cantRun.Show()
+		}
 	}), container.NewMax(buttonColor, returnText("tetris-beta")))
 	toggleButton5 := container.NewMax(widget.NewButton("", func() {
 		options.Hide()
-		w.SetContent(createSnake(w))
+		w.SetContent(createSnake(w, CustomTheme))
 		// options.Hide()
 		// w.SetContent(createTetris(w, false))
 	}), container.NewMax(buttonColor, returnText("snake")))
@@ -209,7 +322,7 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		// options.Hide()
 		// w.SetContent(createSnake(w))
 		options.Hide()
-		w.SetContent(createTetris(w, false))
+		w.SetContent(createTetris(w, CustomTheme, false))
 	}), container.NewMax(buttonColor, returnText("tetris-latest")))
 	toggleButton1 := container.NewMax(widget.NewButton("", func() {
 		if right.Visible() {
@@ -218,11 +331,11 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 			right.Show()
 		}
 		//fyne.CanvasObject
-		resizeAndRefresh(top, bottom, left, right, centerRect, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
+		resizeAndRefresh(top, bottom, left, right, center, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
 	}), container.NewMax(buttonColor, returnText("show/hide sidebar")))
 	toggleButton7 := container.NewMax(widget.NewButton("", func() {
 		enableOptions = false
-		resizeAndRefresh(top, bottom, left, right, centerRect, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
+		resizeAndRefresh(top, bottom, left, right, center, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
 	}), container.NewMax(buttonColor, returnText("exit options")))
 	// Define initial positions
 	initialPositions := map[fyne.CanvasObject]float32{
@@ -301,27 +414,19 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	spacer2 := layout.NewSpacer()
 
 	// Create the square with a label to display the system theme
-	themeLabel := widget.NewLabel(themeName)
+	themeLabel := widget.NewLabel("theme:  " + themeName)
 	square := canvas.NewRectangle(themeLabelColor)
 	square.Resize(fyne.NewSize(50, 50)) // Adjust the size of the square as needed
 
 	themeContainer := container.NewCenter(themeLabel)       // Center the label inside the square
 	themeSquare := container.NewMax(square, themeContainer) // Overlay the label on the square
 
-	// Position the square at the bottom left by adding it after the spacer
-	// left = container.NewMax(container.NewVBox(
-	// 	widget.NewLabel("Buttons:"),
-	// 	toggleButton1,
-	// 	toggleButton2,
-	// 	spacer2,     // This spacer will take up all the space, pushing the themeSquare to the bottom
-	// 	themeSquare, // The square with the theme label
-	// ), bgColor)
 	leftContent := container.NewVBox(
 		widget.NewLabel("Buttons:"),
 		toggleButton1,
 		toggleButton2,
-		spacer2,     // This spacer will take up all the space, pushing the themeSquare to the bottom
-		themeSquare, // The square with the theme label
+		spacer2,
+		themeSquare,
 	)
 
 	// Layer the background and the VBox using container.NewMax
@@ -333,12 +438,12 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	// Update the root container to use the rectangle in the center
 	//dividers[0], dividers[1], dividers[2]
 	// root = container.NewBorder(top, bottom, left, right, centerRect, options)
-	root = container.NewBorder(top, bottom, left, right, options, dividers[0], dividers[1], dividers[2], centerRect)
+	root = container.NewBorder(top, bottom, left, right, options, dividers[0], dividers[1], dividers[2], center)
 
 	enableOptions = false
 
 	root.Resize(fyne.NewSize(800, 600))
-	resizeAndRefresh(top, bottom, left, right, centerRect, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
+	resizeAndRefresh(top, bottom, left, right, center, textbox, content, dividers, root.Size(), right.Visible(), enableOptions, options, root)
 
 	// Declare the welcomeModal variable
 	var welcomeModal *widget.PopUp
@@ -365,6 +470,37 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	// welcomeModal.Show()
 
 	return root
+}
+
+var darkMoistYellow = color.RGBA{R: 0xB8, G: 0x8F, B: 0x00, A: 0xFF} // Adjust the RGB values as needed
+
+func getSidebar(w fyne.Window, customTheme *CustomTheme) *fyne.Container {
+	// Create a rectangle with the dark moist yellow color
+	containerRect := canvas.NewRectangle(darkMoistYellow)
+
+	// Set a specific size for the container
+	containerRect.SetMinSize(fyne.NewSize(100, 200)) // Set desired size
+	returnToggleButton := container.NewMax(widget.NewButton("", func() {
+		returnToMenu(w, customTheme)
+	}), container.NewMax(buttonColor, returnText("exit options")))
+	// Create a container with the rectangle and a label
+	container := container.NewMax(containerRect, returnToggleButton)
+
+	return container
+}
+func returnToMenu(w fyne.Window, customTheme *CustomTheme) {
+	// fmt.Println("test")
+	w.SetContent(makeGUI(w, customTheme))
+}
+func getFiller() *fyne.Container {
+	// Define the black color
+	blackColor := color.RGBA{0x10, 0x10, 0x10, 0xff}
+
+	// Create a rectangle with the black color
+	containerRect := canvas.NewRectangle(blackColor)
+	containerRect.SetMinSize(fyne.NewSize(500, 200))
+	// Return a container with the black rectangle
+	return container.NewMax(containerRect)
 }
 
 // Define button actions

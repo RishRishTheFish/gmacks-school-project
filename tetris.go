@@ -2,6 +2,7 @@ package main
 
 import (
 	"image/color"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -12,7 +13,49 @@ import (
 	"fyne.io/fyne/v2/layout"
 )
 
-func createTetris(w fyne.Window, isBeta bool) *fyne.Container {
+type BlockGroup struct {
+	Shape  [][]int     // 2D array to represent the shape
+	Color  color.NRGBA // Color of the block
+	Width  int         // Width of the block
+	Height int         // Height of the block
+}
+
+//	var blockGroups = []BlockGroup{
+//		{
+//			Shape: [][]int{
+//				{1, 1, 1, 1}, // I shape
+//			},
+//			Color:  color.NRGBA{0, 255, 255, 255}, // Cyan
+//			Width:  4,
+//			Height: 1,
+//		},
+//		{
+//			Shape: [][]int{
+//				{1, 1},
+//				{1, 1}, // O shape
+//			},
+//			Color:  color.NRGBA{255, 255, 0, 255}, // Yellow
+//			Width:  2,
+//			Height: 2,
+//		},
+//		// Add other shapes like T, S, Z, J, L...
+//	}
+func makeSquare(x float32) []fyne.Position {
+	return []fyne.Position{
+		fyne.NewPos(x, 1),
+		fyne.NewPos(x, 2),
+		fyne.NewPos(x+1, 1),
+		fyne.NewPos(x+1, 2),
+	}
+}
+func makeLine(x float32) []fyne.Position {
+	return []fyne.Position{
+		fyne.NewPos(x, 1),
+		fyne.NewPos(x, 2),
+	}
+}
+
+func createTetris(w fyne.Window, customTheme *CustomTheme, isBeta bool) *fyne.Container {
 	const gridWidth, gridHeight = 10, 20
 	const cellSize = 20
 
@@ -27,7 +70,9 @@ func createTetris(w fyne.Window, isBeta bool) *fyne.Container {
 
 	// Create the grid for Tetris blocks
 	cells := make([]*canvas.Rectangle, gridWidth*gridHeight)
+	// var groupCells []*canvas.Rectangle
 	grid := container.NewGridWithColumns(gridWidth)
+
 	for i := range cells {
 		cells[i] = canvas.NewRectangle(cellColor)
 		cells[i].SetMinSize(fyne.NewSize(cellSize, cellSize))
@@ -76,10 +121,27 @@ func createTetris(w fyne.Window, isBeta bool) *fyne.Container {
 		index := (pieceY+1)*gridWidth + pieceX
 		return lockedCells[index] == nil
 	}
+	actions := map[string]func(x float32) []fyne.Position{
+		"square": makeSquare,
+		"line":   makeLine,
+		// "corner": makeCorner, // Uncomment if makeCorner is available
+	}
+	actionNames := make([]string, 0, len(actions))
+	for name := range actions {
+
+		actionNames = append(actionNames, name)
+	}
+	randomIndex := rand.Intn(max(1, len(actionNames)))
+	selectedActionName := actionNames[randomIndex]
 
 	renderPiece := func() {
-		index := pieceY*gridWidth + pieceX
-		bufferedGrid[index] = color.NRGBA{255, 0, 0, 255}
+		for _, cell := range actions[selectedActionName](float32(pieceX)) {
+			// Calculate the index based on the x and y positions of the piece
+			index := int(cell.Y)*gridWidth + int(cell.X)
+
+			// Update the buffered grid with the desired color
+			bufferedGrid[index] = color.NRGBA{255, 0, 0, 255}
+		}
 	}
 
 	deleteRow := func(y int) {
@@ -142,6 +204,12 @@ func createTetris(w fyne.Window, isBeta bool) *fyne.Container {
 		}
 		if isKeyPressed(fyne.KeyRight) && pieceX < gridWidth-1 {
 			pieceX++
+		}
+		if isKeyPressed(fyne.KeySpace) {
+			for canFall() {
+				pieceY++
+			}
+			fallTick = tick
 		}
 
 		if tick-fallTick >= 5 {
@@ -207,15 +275,31 @@ func createTetris(w fyne.Window, isBeta bool) *fyne.Container {
 		gridWrapper,
 		footer,
 	)
-
+	// returnToggleButton := container.NewMax(widget.NewButton("", func() {
+	// 	returnToMenu(w, customTheme)
+	// }), container.NewMax(buttonColor, returnText("exit options")))
 	// Overlay the game UI on top of the background
 	content := container.NewMax(background, gameContainer)
+	content = container.NewBorder(nil, nil, nil, getSidebar(w, customTheme), content)
 
 	return content
 }
 
+// func isKeyPressed(key fyne.KeyName) bool {
+// 	keysMutex.Lock()
+// 	defer keysMutex.Unlock()
+// 	return keys[key] == 0 || keys[key] > 0
+// }
+
 // loop runs a fixed timestep game loop. It calls fn a fixed number of times per second.
 func loop(tps int, fn func(tick int)) {
+	// if isKeyPressed(fyne.KeySpace) {
+	// 	// Drop the piece all the way down
+	// 	for canFall() {
+	// 		pieceY++
+	// 	}
+	// 	fallTick = tick // Reset the fall tick to prevent immediate locking
+	// }
 	lastTick := time.Now().UnixNano()
 	var tick int
 	for {
