@@ -35,32 +35,68 @@ var (
 //		}
 //		return container.New(&boardLayout{}, cells...)
 //	}
-func createFlippedGrid(g *chess.Game, theme *CustomTheme) *fyne.Container {
-	var cells []fyne.CanvasObject
+// func updateFlippedGrid(grid *fyne.Container, g *chess.Game, theme *CustomTheme) {
+// 	for i, obj := range grid.Objects {
+// 		x := i % 8
+// 		y := 7 - (i / 8)
 
-	// Create a placeholder for the grid pointer
-	grid := new(fyne.Container)
+// 		bg := obj.(*fyne.Container).Objects[0].(*canvas.Rectangle)
+// 		if x%2 == y%2 {
+// 			bg.FillColor = color.RGBA{0x73, 0x50, 0x32, 0xFF}
+// 		} else {
+// 			bg.FillColor = color.NRGBA{0xF4, 0xE2, 0xB6, 0xFF}
+// 		}
+// 		bg.Refresh()
 
-	for y := 0; y < 8; y++ {
-		for x := 7; x >= 0; x-- {
-			bg := canvas.NewRectangle(color.NRGBA{0xF4, 0xE2, 0xB6, 0xFF})
-			if x%2 == y%2 {
-				bg.FillColor = color.RGBA{0x73, 0x50, 0x32, 0xFF}
-			}
+// 		unrotatedIndex := x + (7-y)*8
+// 		flippedIndex := 63 - unrotatedIndex
 
-			// Create the piece and pass the grid pointer to it
-			p := newPeice(g, chess.Square(x+y*8), grid, false, theme)
-			cells = append(cells, container.NewMax(bg, p))
-		}
-	}
+// 		p := newPeice(g, chess.Square(flippedIndex), grid, false, theme)
+// 		obj.(*fyne.Container).Objects[1] = p
+// 	}
+// }
 
-	// Now that the grid is fully constructed, reassign grid
-	*grid = *container.New(&boardLayout{}, cells...)
+// func createFlippedGrid(g *chess.Game, theme *CustomTheme) *fyne.Container {
+// 	var cells []fyne.CanvasObject
 
-	return grid
-}
+// 	// Create a placeholder for the grid pointer
+// 	grid := new(fyne.Container)
 
-func createGrid(g *chess.Game, theme *CustomTheme, pve bool) *fyne.Container {
+// 	for y := 7; y >= 0; y-- {
+// 		for x := 0; x < 8; x++ {
+// 			bg := canvas.NewRectangle(color.NRGBA{0xF4, 0xE2, 0xB6, 0xFF})
+// 			if x%2 == y%2 {
+// 				bg.FillColor = color.RGBA{0x73, 0x50, 0x32, 0xFF}
+// 			}
+
+// 			unrotatedIndex := x + y*8
+// 			flippedIndex := 63 - unrotatedIndex
+
+// 			// Create the piece and pass the grid pointer to it
+// 			p := newPeice(g, chess.Square(flippedIndex), grid, false, theme)
+// 			cells = append(cells, container.NewMax(bg, p))
+// 		}
+// 	}
+
+// 	// Now that the grid is fully constructed, reassign grid
+// 	*grid = *container.New(&boardLayout{}, cells...)
+
+//		return grid
+//	}
+// diff --git a/ui.go b/ui.go
+// index 9952067..714f097 100644
+// --- a/ui.go
+// +++ b/ui.go
+// @@ -56,7 +56,7 @@ func (u *ui) createGrid() *boardContainer {
+//                                 effect.Resource = resourceOverlay2Png
+//                         }
+
+//   - p := newPiece(u, chess.Square(x+y*8))
+//   - p := newPiece(u, chess.Square((7-x)+(7-y)*8))
+//     cells = append(cells, container.NewMax(bg, effect, p))
+//     }
+//     }
+func createGrid(g *chess.Game, pve bool, theme *CustomTheme) *fyne.Container {
 	var cells []fyne.CanvasObject
 
 	// Create a placeholder for the grid pointer
@@ -327,7 +363,7 @@ func createChess(w fyne.Window, pve bool, customTheme *CustomTheme) {
 
 	win.Resize(fyne.NewSize(480, 480))
 
-	grid := createGrid(game, customTheme, pve)
+	grid := createGrid(game, pve, customTheme)
 	over = canvas.NewImageFromResource(nil)
 	over.Hide()
 
@@ -363,46 +399,60 @@ func refreshGrid(grid *fyne.Container, b *chess.Board) {
 		}
 	}
 }
-func flipGrid(grid *fyne.Container, b *chess.Board) {
-	// Retrieve the objects in the grid
-	objects := grid.Objects
+func updateFlippedGrid(grid *fyne.Container, g *chess.Game, theme *CustomTheme) {
+	for i, obj := range grid.Objects {
+		x := i % 8
+		y := 7 - (i / 8)
 
-	// Prepare a list to hold the pieces
-	pieces := make([]*peice, len(objects))
-
-	// Extract the piece widgets from the grid objects
-	for i, obj := range objects {
-		pieceContainer := obj.(*fyne.Container)
-		piece := pieceContainer.Objects[1].(*peice)
-		pieces[i] = piece
-	}
-
-	// Flip each row of the grid horizontally
-	for y := 0; y < 8; y++ {
-		for x := 0; x < 4; x++ { // Only need to go halfway because we'll swap pairs
-			// Calculate the index for the current and opposite cells in the row
-			index1 := y*8 + x
-			index2 := y*8 + (7 - x)
-
-			// Swap the pieces at index1 and index2
-			piece1 := pieces[index1]
-			piece2 := pieces[index2]
-
-			// Swap the resources
-			p1 := b.Piece(chess.Square(index1))
-			p2 := b.Piece(chess.Square(index2))
-
-			piece1.Resource = resourceForPiece(p2.Color(), p2.Type())
-			piece2.Resource = resourceForPiece(p1.Color(), p1.Type())
-
-			piece1.Refresh()
-			piece2.Refresh()
+		bg := obj.(*fyne.Container).Objects[0].(*canvas.Rectangle)
+		if x%2 == y%2 {
+			bg.FillColor = color.RGBA{0x73, 0x50, 0x32, 0xFF}
+		} else {
+			bg.FillColor = color.NRGBA{0xF4, 0xE2, 0xB6, 0xFF}
 		}
-	}
+		bg.Refresh()
 
-	// Optionally, refresh the grid container to reflect changes
-	grid.Refresh()
+		unrotatedIndex := x + (7-y)*8
+		flippedIndex := 63 - unrotatedIndex
+
+		p := newPeice(g, chess.Square(flippedIndex), grid, false, theme)
+
+		// Update the piece in the container
+		obj.(*fyne.Container).Objects[1] = p
+
+		// Refresh the new piece
+		p.Refresh()
+	}
+	grid.Refresh() // Refresh the entire grid after updating
 }
+
+// func updateFlippedGrid(grid *fyne.Container, g *chess.Game, theme *CustomTheme) {
+// 	for i, obj := range grid.Objects {
+// 		// Calculate the original and flipped indices
+// 		x := i % 8
+// 		y := 7 - (i / 8) // Flip the row
+
+// 		bg := obj.(*fyne.Container).Objects[0].(*canvas.Rectangle)
+// 		if x%2 == y%2 {
+// 			bg.FillColor = color.RGBA{0x73, 0x50, 0x32, 0xFF}
+// 		} else {
+// 			bg.FillColor = color.NRGBA{0xF4, 0xE2, 0xB6, 0xFF}
+// 		}
+// 		bg.Refresh()
+
+// 		// Calculate the flipped piece index
+// 		unrotatedIndex := x + (7-y)*8
+// 		flippedIndex := 63 - unrotatedIndex
+
+// 		// Update the piece at the flipped index
+// 		if pieceObj, ok := obj.(*fyne.Container).Objects[1].(*peice); ok {
+// 			updatedPiece := newPeice(g, chess.Square(flippedIndex), grid, false, theme)
+// 			pieceObj.Resource = updatedPiece.Resource
+// 			pieceObj.Refresh()
+// 		}
+// 	}
+// 	grid.Refresh()
+// }
 
 // func flipGrid(grid *fyne.Container, b *chess.Board) {
 // 	// Retrieve the objects in the grid

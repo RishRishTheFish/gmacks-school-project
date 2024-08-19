@@ -142,7 +142,10 @@ func (p *peice) Tapped(ev *fyne.PointEvent) {
 					randomResponse(p.game, g, over, p.theme)
 					//w.SetContent(createFlippedGrid(p.game, p.theme))
 				} else {
-					w.SetContent(createFlippedGrid(p.game, p.theme))
+					w.SetContent(createRotatedGrid(p.game, p.theme))
+					//updateFlippedGrid(p.container, p.game, p.theme)
+					//w.SetContent()
+					//w.SetContent(createFlippedGrid(p.game, p.theme))
 					// randomResponse(p.game, g, over, p.theme)
 				}
 			}
@@ -153,6 +156,31 @@ func (p *peice) Tapped(ev *fyne.PointEvent) {
 		p.game.Position().Board().Piece(moveStart), p.square))
 
 	moveStart = chess.NoSquare
+}
+func createRotatedGrid(g *chess.Game, theme *CustomTheme) *fyne.Container {
+	var cells []fyne.CanvasObject
+
+	// Create a placeholder for the grid pointer
+	grid := new(fyne.Container)
+
+	// Iterate over the board's rows and columns
+	for y := 7; y >= 0; y-- {
+		for x := 0; x < 8; x++ {
+			bg := canvas.NewRectangle(color.NRGBA{0xF4, 0xE2, 0xB6, 0xFF})
+			if x%2 == y%2 {
+				bg.FillColor = color.RGBA{0x73, 0x50, 0x32, 0xFF}
+			}
+
+			// Apply the diff: reverse the calculation for the piece index
+			p := newPeice(g, chess.Square((7-x)+(7-y)*8), grid, false, theme)
+			cells = append(cells, container.NewMax(bg, p))
+		}
+	}
+
+	// Now that the grid is fully constructed, reassign grid
+	*grid = *container.New(&boardLayout{}, cells...)
+
+	return grid
 }
 
 func isValidMove(s1, s2 chess.Square, g *chess.Game) *chess.Move {

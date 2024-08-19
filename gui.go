@@ -281,7 +281,7 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		// fyne.NewSize(300, 150),
 		container.NewVBox(
 			// widget.NewLabel("You cannot run this"),
-			container.NewMax(buttonColor, returnText("Sorry! beta functionality isnt avalible at the moment")),
+			container.NewMax(buttonColor, returnText("Sorry! this functionality isnt avalible at the moment")),
 
 			container.NewMax(widget.NewButton("", func() {
 				cantRun.Hide()
@@ -293,17 +293,32 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 		container.NewCenter(cantRunVbox)),
 		w.Canvas(),
 	)
+	// cantDoPvp = widget.NewModalPopUp(
+	// 	container.NewMax(
+	// 		optionsColor, container.NewVBox(
+	// 			returnText("Sorry! the functionality is not avalible at the moment"),
+	// 		),
+	// 	),
+	// 	w.Canvas(),
+	// )
 	var chessMode *widget.PopUp
 	toggleButton8 := container.NewMax(widget.NewButton("", func() {
 		options.Hide()
 		chessMode.Hide()
 		createChess(w, true, CustomTheme)
 	}), container.NewMax(buttonColor, returnText("chess with pve")))
+	toggleButton9 := container.NewMax(widget.NewButton("", func() {
+		// options.Hide()
+		chessMode.Hide()
+		cantRun.Show()
+		//createChess(w, false, CustomTheme)
+	}), container.NewMax(buttonColor, returnText("chess with pvp")))
 	chessMode = widget.NewModalPopUp(
 		container.NewMax(
 			optionsColor,
 			container.NewVBox(
 				toggleButton8,
+				toggleButton9,
 			),
 		),
 		w.Canvas(),
@@ -328,7 +343,8 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	}), container.NewMax(buttonColor, returnText("tetris-beta")))
 	toggleButton5 := container.NewMax(widget.NewButton("", func() {
 		options.Hide()
-		w.SetContent(createSnake(w, CustomTheme))
+		cantRun.Show()
+		//w.SetContent(createSnake(w, CustomTheme))
 		// options.Hide()
 		// w.SetContent(createTetris(w, false))
 	}), container.NewMax(buttonColor, returnText("snake")))
