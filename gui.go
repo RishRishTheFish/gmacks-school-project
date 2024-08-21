@@ -350,8 +350,9 @@ func makeGUI(w fyne.Window, CustomTheme *CustomTheme) fyne.CanvasObject {
 	}), container.NewMax(buttonColor, returnText("tetris-beta")))
 	toggleButton5 := container.NewMax(widget.NewButton("", func() {
 		options.Hide()
-		cantRun.Show()
-		//w.SetContent(createSnake(w, CustomTheme))
+		// cantRun.Show()
+
+		w.SetContent(createSnake(w, CustomTheme))
 		// options.Hide()
 		// w.SetContent(createTetris(w, false))
 	}), container.NewMax(buttonColor, returnText("snake")))
